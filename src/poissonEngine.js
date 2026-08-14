@@ -1,136 +1,77 @@
 function factorial(n) {
-  if (n <= 1) return 1;
-
-  let result = 1;
-
-  for (let i = 2; i <= n; i++) {
-    result *= i;
-  }
-
-  return result;
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
 }
 
-function poissonProbability(lambda, goals) {
-  if (lambda < 0 || goals < 0) return 0;
-
-  return (
-    Math.exp(-lambda) *
-    Math.pow(lambda, goals) /
-    factorial(goals)
-  );
+function poisson(lambda, k) {
+  return Math.exp(-lambda) *
+    Math.pow(lambda, k) /
+    factorial(k);
 }
 
-function buildGoalDistribution(expectedGoals, maxGoals = 7) {
-  const distribution = [];
-
-  for (let goals = 0; goals <= maxGoals; goals++) {
-    distribution.push({
-      goals,
-      probability: poissonProbability(
-        expectedGoals,
-        goals
-      )
-    });
-  }
-
-  return distribution;
-}
-
-function buildPoissonMatrix(homeExpectedGoals, awayExpectedGoals) {
-  const homeDistribution =
-    buildGoalDistribution(homeExpectedGoals);
-
-  const awayDistribution =
-    buildGoalDistribution(awayExpectedGoals);
-
+function buildPoissonMatrix(homeXG, awayXG, max = 8) {
   const matrix = [];
 
-  for (const home of homeDistribution) {
-    for (const away of awayDistribution) {
-
+  for (let h = 0; h <= max; h++) {
+    for (let a = 0; a <= max; a++) {
       matrix.push({
-        homeGoals: home.goals,
-        awayGoals: away.goals,
-
+        homeGoals: h,
+        awayGoals: a,
         probability:
-          home.probability *
-          away.probability
+          poisson(homeXG, h) *
+          poisson(awayXG, a)
       });
-
     }
   }
 
-  return matrix;
+  const total = matrix.reduce(
+    (s, x) => s + x.probability,
+    0
+  );
+
+  return matrix.map(x => ({
+    ...x,
+    probability: x.probability / total
+  }));
 }
 
 function calculateMarkets(matrix) {
-  let homeWin = 0;
-  let draw = 0;
-  let awayWin = 0;
+  const r = {
+    homeWin: 0,
+    draw: 0,
+    awayWin: 0,
+    over25: 0,
+    under25: 0,
+    bttsYes: 0,
+    bttsNo: 0
+  };
 
-  let over25 = 0;
-  let under25 = 0;
+  for (const x of matrix) {
+    const { homeGoals: h, awayGoals: a, probability: p } = x;
 
-  let bttsYes = 0;
-  let bttsNo = 0;
+    if (h > a) r.homeWin += p;
+    else if (h === a) r.draw += p;
+    else r.awayWin += p;
 
-  for (const result of matrix) {
-    const {
-      homeGoals,
-      awayGoals,
-      probability
-    } = result;
+    if (h + a > 2) r.over25 += p;
+    else r.under25 += p;
 
-    // 1X2
-    if (homeGoals > awayGoals) {
-      homeWin += probability;
-    } else if (homeGoals === awayGoals) {
-      draw += probability;
-    } else {
-      awayWin += probability;
-    }
-
-    // Over / Under 2.5
-    if (homeGoals + awayGoals > 2) {
-      over25 += probability;
-    } else {
-      under25 += probability;
-    }
-
-    // BTTS
-    if (homeGoals > 0 && awayGoals > 0) {
-      bttsYes += probability;
-    } else {
-      bttsNo += probability;
-    }
+    if (h > 0 && a > 0) r.bttsYes += p;
+    else r.bttsNo += p;
   }
 
-  return {
-    homeWin,
-    draw,
-    awayWin,
-
-    over25,
-    under25,
-
-    bttsYes,
-    bttsNo
-  };
+  return r;
 }
 
 function getTopScores(matrix, limit = 3) {
   return [...matrix]
-    .sort(
-      (a, b) =>
-        b.probability - a.probability
-    )
+    .sort((a, b) => b.probability - a.probability)
     .slice(0, limit);
 }
 
 module.exports = {
-  factorial,
-  poissonProbability,
-  buildGoalDistribution,
+  poisson,
   buildPoissonMatrix,
   calculateMarkets,
   getTopScores
