@@ -9,6 +9,10 @@ const {
   calculateExpectedGoals
 } = require("./expectedGoals");
 
+const {
+  calculateConfidence
+} = require("./confidenceEngine");
+
 function round(value, decimals = 2) {
   return Number(value.toFixed(decimals));
 }
@@ -38,31 +42,6 @@ function getWinner(markets) {
   )[0];
 }
 
-function getConfidence(markets) {
-  const probabilities = [
-    markets.homeWin,
-    markets.draw,
-    markets.awayWin
-  ].sort((a, b) => b - a);
-
-  const separation =
-    probabilities[0] - probabilities[1];
-
-  /*
-   * Plus l'écart entre le premier et le
-   * deuxième choix est important,
-   * plus le signal est intéressant.
-   */
-
-  const confidence =
-    50 + separation * 100;
-
-  return round(
-    Math.max(0, Math.min(100, confidence)),
-    1
-  );
-}
-
 function predictMatch(homeTeam, awayTeam) {
   const homeStats = analyzeTeam(homeTeam);
   const awayStats = analyzeTeam(awayTeam);
@@ -89,8 +68,12 @@ function predictMatch(homeTeam, awayTeam) {
     getWinner(markets);
 
   const confidence =
-    getConfidence(markets);
-
+  calculateConfidence(
+    markets.homeWin,
+    markets.draw,
+    markets.awayWin
+  );
+  
   let prediction;
 
   if (winner.type === "HOME") {
