@@ -1,0 +1,13 @@
+{
+  "name": "roi-prediction-fifa",
+  "version": "1.0.0",
+  "description": "Moteur de prédiction IA pour les compétitions FIFA virtuelles",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
