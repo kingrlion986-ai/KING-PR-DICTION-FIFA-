@@ -7,67 +7,77 @@
   <title>ROI Prediction FIFA</title>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #0b1020;
-      color: white;
+      background: #080c18;
+      color: #ffffff;
     }
 
     .container {
-      max-width: 900px;
+      width: min(100% - 30px, 900px);
       margin: auto;
-      padding: 40px 20px;
+      padding: 35px 0;
+    }
+
+    header {
       text-align: center;
+      margin-bottom: 30px;
     }
 
     h1 {
-      font-size: 36px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+      font-size: 34px;
     }
 
     .subtitle {
       color: #9ca3af;
-      margin-bottom: 40px;
-    }
-
-    .status {
-      display: inline-block;
-      padding: 10px 18px;
-      border-radius: 20px;
-      background: #12351f;
-      color: #4ade80;
-      margin-bottom: 30px;
     }
 
     .card {
-      background: #151b2f;
-      border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      background: #121827;
+      border: 1px solid #20283b;
+      border-radius: 18px;
+      padding: 25px;
+      margin-bottom: 20px;
     }
 
-    .teams {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 30px;
-      font-size: 24px;
-      margin: 30px 0;
+    .form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
     }
 
-    .vs {
+    label {
+      display: block;
+      margin-bottom: 8px;
       color: #9ca3af;
-      font-size: 16px;
+    }
+
+    select {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #30394f;
+      background: #0b1020;
+      color: white;
+      font-size: 15px;
     }
 
     button {
-      border: none;
+      width: 100%;
+      margin-top: 20px;
+      padding: 15px;
+      border: 0;
       border-radius: 10px;
-      padding: 14px 25px;
       background: #2563eb;
       color: white;
       font-size: 16px;
+      font-weight: bold;
       cursor: pointer;
     }
 
@@ -75,68 +85,478 @@
       background: #1d4ed8;
     }
 
-    #result {
-      margin-top: 25px;
+    .loading {
+      text-align: center;
       color: #9ca3af;
+      padding: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .prediction {
+      text-align: center;
+    }
+
+    .winner {
+      font-size: 28px;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+
+    .confidence {
+      font-size: 20px;
+      margin: 15px 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      background: #0b1020;
+      border-radius: 12px;
+      padding: 18px 10px;
+      text-align: center;
+    }
+
+    .stat-title {
+      color: #9ca3af;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .scores {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .score {
+      background: #0b1020;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .score-name {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .score-probability {
+      color: #9ca3af;
+      margin-top: 5px;
+    }
+
+    .error {
+      color: #f87171;
+      text-align: center;
+      padding: 15px;
+    }
+
+    @media (max-width: 650px) {
+      .form {
+        grid-template-columns: 1fr;
+      }
+
+      .stats,
+      .scores {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 
 <body>
 
-  <div class="container">
+<div class="container">
 
+  <header>
     <h1>⚽ ROI Prediction FIFA</h1>
-
     <div class="subtitle">
-      Intelligence artificielle pour les compétitions FIFA virtuelles
+      FIFA Virtual AI Prediction Engine
+    </div>
+  </header>
+
+  <div class="card">
+
+    <h2>🎯 Nouvelle prédiction</h2>
+
+    <div class="form">
+
+      <div>
+        <label for="homeTeam">Équipe domicile</label>
+        <select id="homeTeam">
+          <option value="">Chargement...</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="awayTeam">Équipe extérieure</label>
+        <select id="awayTeam">
+          <option value="">Chargement...</option>
+        </select>
+      </div>
+
     </div>
 
-    <div class="status">
-      ● Système prêt
+    <button onclick="predict()">
+      🔮 ANALYSER LE MATCH
+    </button>
+
+  </div>
+
+  <div id="loading" class="card loading hidden">
+    Analyse des données...
+  </div>
+
+  <div id="error" class="card error hidden"></div>
+
+  <div id="result" class="hidden">
+
+    <div class="card prediction">
+
+      <h2>🏆 Pronostic principal</h2>
+
+      <div id="matchName"></div>
+
+      <div class="winner" id="winner"></div>
+
+      <div class="confidence">
+        ⭐ Confiance :
+        <strong id="confidence"></strong>%
+      </div>
+
     </div>
 
     <div class="card">
 
-      <h2>FIFA Virtual AI</h2>
+      <h2>📊 Probabilités</h2>
 
-      <div class="teams">
-        <span>TEAM A</span>
-        <span class="vs">VS</span>
-        <span>TEAM B</span>
+      <div class="stats">
+
+        <div class="stat">
+          <div class="stat-title">Domicile</div>
+          <div class="stat-value" id="homeWin"></div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Nul</div>
+          <div class="stat-value" id="draw"></div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Extérieur</div>
+          <div class="stat-value" id="awayWin"></div>
+        </div>
+
       </div>
 
-      <button onclick="checkAI()">
-        Vérifier l'IA
-      </button>
+      <div class="stats">
 
-      <div id="result">
-        En attente du moteur de prédiction...
+        <div class="stat">
+          <div class="stat-title">Over 2.5</div>
+          <div class="stat-value" id="over25"></div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Under 2.5</div>
+          <div class="stat-value" id="under25"></div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">BTTS</div>
+          <div class="stat-value" id="btts"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="card">
+
+      <h2>🥅 Scores les plus probables</h2>
+
+      <div class="scores" id="scores"></div>
+
+    </div>
+
+    <div class="card">
+
+      <h2>⚽ Expected Goals</h2>
+
+      <div class="stats">
+
+        <div class="stat">
+          <div class="stat-title">Domicile xG</div>
+          <div class="stat-value" id="homeXG"></div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Extérieur xG</div>
+          <div class="stat-value" id="awayXG"></div>
+        </div>
+
       </div>
 
     </div>
 
   </div>
 
-  <script>
-    async function checkAI() {
-      const result = document.getElementById("result");
+</div>
 
-      result.textContent = "Connexion au moteur...";
+<script>
 
-      try {
-        const response = await fetch("/api/status");
-        const data = await response.json();
+async function loadTeams() {
 
-        result.textContent =
-          data.message + " — Version " + data.version;
+  try {
 
-      } catch (error) {
-        result.textContent =
-          "Impossible de contacter le serveur.";
-      }
+    const response =
+      await fetch("/api/teams");
+
+    const data =
+      await response.json();
+
+    const home =
+      document.getElementById("homeTeam");
+
+    const away =
+      document.getElementById("awayTeam");
+
+    home.innerHTML =
+      '<option value="">Choisir une équipe</option>';
+
+    away.innerHTML =
+      '<option value="">Choisir une équipe</option>';
+
+    data.teams.forEach(team => {
+
+      const optionHome =
+        document.createElement("option");
+
+      optionHome.value = team;
+      optionHome.textContent = team;
+
+      home.appendChild(optionHome);
+
+      const optionAway =
+        document.createElement("option");
+
+      optionAway.value = team;
+      optionAway.textContent = team;
+
+      away.appendChild(optionAway);
+
+    });
+
+  } catch (error) {
+
+    showError(
+      "Impossible de charger les équipes."
+    );
+
+  }
+}
+
+
+async function predict() {
+
+  const home =
+    document.getElementById("homeTeam").value;
+
+  const away =
+    document.getElementById("awayTeam").value;
+
+  if (!home || !away) {
+
+    showError(
+      "Sélectionne les deux équipes."
+    );
+
+    return;
+  }
+
+  if (home === away) {
+
+    showError(
+      "Les deux équipes doivent être différentes."
+    );
+
+    return;
+  }
+
+  hideError();
+
+  document
+    .getElementById("result")
+    .classList.add("hidden");
+
+  document
+    .getElementById("loading")
+    .classList.remove("hidden");
+
+  try {
+
+    const response =
+      await fetch(
+        `/api/predict?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`
+      );
+
+    const data =
+      await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
     }
-  </script>
+
+    displayPrediction(
+      data.prediction
+    );
+
+  } catch (error) {
+
+    showError(
+      error.message ||
+      "Erreur pendant la prédiction."
+    );
+
+  } finally {
+
+    document
+      .getElementById("loading")
+      .classList.add("hidden");
+
+  }
+}
+
+
+function displayPrediction(prediction) {
+
+  const p =
+    prediction.predictions;
+
+  document
+    .getElementById("matchName")
+    .textContent =
+      `${prediction.match.home} 🆚 ${prediction.match.away}`;
+
+  document
+    .getElementById("winner")
+    .textContent =
+      p.winner === "DRAW"
+        ? "🤝 MATCH NUL"
+        : `🏆 ${p.winner}`;
+
+  document
+    .getElementById("confidence")
+    .textContent =
+      p.confidence;
+
+  document
+    .getElementById("homeWin")
+    .textContent =
+      p.homeWin + "%";
+
+  document
+    .getElementById("draw")
+    .textContent =
+      p.draw + "%";
+
+  document
+    .getElementById("awayWin")
+    .textContent =
+      p.awayWin + "%";
+
+  document
+    .getElementById("over25")
+    .textContent =
+      p.over25 + "%";
+
+  document
+    .getElementById("under25")
+    .textContent =
+      p.under25 + "%";
+
+  document
+    .getElementById("btts")
+    .textContent =
+      p.bttsYes + "%";
+
+  document
+    .getElementById("homeXG")
+    .textContent =
+      prediction.expectedGoals.home;
+
+  document
+    .getElementById("awayXG")
+    .textContent =
+      prediction.expectedGoals.away;
+
+  const scores =
+    document.getElementById("scores");
+
+  scores.innerHTML = "";
+
+  prediction.topScores.forEach(item => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "score";
+
+    div.innerHTML = `
+      <div class="score-name">
+        ${item.score}
+      </div>
+
+      <div class="score-probability">
+        ${item.probability}%
+      </div>
+    `;
+
+    scores.appendChild(div);
+
+  });
+
+  document
+    .getElementById("result")
+    .classList.remove("hidden");
+}
+
+
+function showError(message) {
+
+  const error =
+    document.getElementById("error");
+
+  error.textContent = message;
+
+  error.classList.remove("hidden");
+}
+
+
+function hideError() {
+
+  document
+    .getElementById("error")
+    .classList.add("hidden");
+}
+
+
+loadTeams();
+
+</script>
 
 </body>
 </html>
