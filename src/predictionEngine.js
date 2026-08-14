@@ -13,6 +13,10 @@ const {
   calculateConfidence
 } = require("./confidenceEngine");
 
+const {
+  calculateDataQuality
+} = require("./qualityEngine");
+
 function round(value, decimals = 2) {
   return Number(value.toFixed(decimals));
 }
@@ -45,6 +49,12 @@ function getWinner(markets) {
 function predictMatch(homeTeam, awayTeam) {
   const homeStats = analyzeTeam(homeTeam);
   const awayStats = analyzeTeam(awayTeam);
+
+  const dataQuality =
+  calculateDataQuality(
+    homeStats.matches,
+    awayStats.matches
+  );
 
   const expectedGoals =
     calculateExpectedGoals(
@@ -102,6 +112,7 @@ function predictMatch(homeTeam, awayTeam) {
 
     predictions: {
       winner: prediction,
+      dataQuality,
 
       homeWin: percentage(markets.homeWin),
       draw: percentage(markets.draw),
