@@ -7,6 +7,12 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
+const {
+  addMatch,
+  getMatches,
+  getTeams
+} = require("./src/dataEngine");
+
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -47,6 +53,56 @@ app.get("/api/predict", (req, res) => {
     res.status(500).json({
       success: false,
       error: "Impossible de générer la prédiction."
+    });
+  }
+});
+
+// Liste des matchs historiques
+app.get("/api/matches", (req, res) => {
+  try {
+    res.json({
+      success: true,
+      count: getMatches().length,
+      matches: getMatches()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Impossible de charger les matchs."
+    });
+  }
+});
+
+// Liste des équipes
+app.get("/api/teams", (req, res) => {
+  try {
+    res.json({
+      success: true,
+      teams: getTeams()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Impossible de charger les équipes."
+    });
+  }
+});
+
+// Ajouter un résultat
+app.post("/api/matches", (req, res) => {
+  try {
+    const match = addMatch(req.body);
+
+    res.status(201).json({
+      success: true,
+      message: "Match enregistré.",
+      match
+    });
+
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error.message
     });
   }
 });
