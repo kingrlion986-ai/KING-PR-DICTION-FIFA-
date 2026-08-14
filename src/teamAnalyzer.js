@@ -1,100 +1,68 @@
-const fs = require("fs");
-const path = require("path");
+const { getTeamMatches } = require("./dataEngine");
 
-const DATA_FILE = path.join(__dirname, "..", "data", "matches.json");
+function analyzeTeam(team) {
+  const matches = getTeamMatches(team);
 
-function loadMatches() {
-  try {
-    const data = fs.readFileSync(DATA_FILE, "utf8");
-    const json = JSON.parse(data);
-
-    return Array.isArray(json.matches) ? json.matches : [];
-  } catch (error) {
-    console.error("Erreur chargement des matchs :", error.message);
-    return [];
-  }
-}
-
-function analyzeTeam(teamName) {
-  const matches = loadMatches();
-
-  const teamMatches = matches.filter(
-    match =>
-      match.home === teamName ||
-      match.away === teamName
-  );
-
-  if (teamMatches.length === 0) {
+  if (!matches.length) {
     return {
-      team: teamName,
+      team,
       matches: 0,
-      goalsScored: 0,
-      goalsConceded: 0,
       avgScored: 0,
       avgConceded: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
+      homeAvgScored: 0,
+      homeAvgConceded: 0,
+      awayAvgScored: 0,
+      awayAvgConceded: 0,
       winRate: 0,
-      formPoints: 0
+      form: 0
     };
   }
 
-  let goalsScored = 0;
-  let goalsConceded = 0;
+  let scored = 0;
+  let conceded = 0;
   let wins = 0;
-  let draws = 0;
-  let losses = 0;
-  let formPoints = 0;
+  let home = [];
+  let away = [];
 
-  teamMatches.forEach(match => {
-    const isHome = match.home === teamName;
+  for (const m of matches) {
+    const isHome = m.home === team;
+    const s = isHome ? m.homeGoals : m.awayGoals;
+    const c = isHome ? m.awayGoals : m.homeGoals;
 
-    const scored = isHome
-      ? Number(match.homeGoals)
-      : Number(match.awayGoals);
+    scored += s;
+    conceded += c;
 
-    const conceded = isHome
-      ? Number(match.awayGoals)
-      : Number(match.homeGoals);
+    if (s > c) wins++;
 
-    goalsScored += scored;
-    goalsConceded += conceded;
+    (isHome ? home : away).push({ s, c });
+  }
 
-    if (scored > conceded) {
-      wins++;
-      formPoints += 3;
-    } else if (scored === conceded) {
-      draws++;
-      formPoints += 1;
-    } else {
-      losses++;
-    }
-  });
-
-  const matchesPlayed = teamMatches.length;
+  const avg = n => n ? n.reduce((a, b) => a + b, 0) / n.length : 0;
 
   return {
-    team: teamName,
-    matches: matchesPlayed,
+    team,
+    matches: matches.length,
 
-    goalsScored,
-    goalsConceded,
+    avgScored: scored / matches.length,
+    avgConceded: conceded / matches.length,
 
-    avgScored: goalsScored / matchesPlayed,
-    avgConceded: goalsConceded / matchesPlayed,
+    homeAvgScored: avg(home.map(x => x.s)),
+    homeAvgConceded: avg(home.map(x => x.c)),
 
-    wins,
-    draws,
-    losses,
+    awayAvgScored: avg(away.map(x => x.s)),
+    awayAvgConceded: avg(away.map(x => x.c)),
 
-    winRate: wins / matchesPlayed,
+    winRate: wins / matches.length,
 
-    formPoints: formPoints / matchesPlayed
+    form: matches
+      .slice(-5)
+      .reduce((p, m) => {
+        const isHome = m.home === team;
+        const s = isHome ? m.homeGoals : m.awayGoals;
+        const c = isHome ? m.awayGoals : m.homeGoals;
+        return p + (s > c ? 3 : s === c ? 1 : 0);
+      }, 0) / Math.min(5, matches.length)
   };
 }
 
-module.exports = {
-  loadMatches,
-  analyzeTeam
-};
+module.exports = { analyzeTeam };
