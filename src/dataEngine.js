@@ -68,11 +68,12 @@ function saveData(data) {
  * Nettoyage du nom d'une équipe.
  */
 function normalizeTeamName(team) {
-  if (typeof team !== "string") {
-    return "";
-  }
+  if (typeof team !== "string") return "";
 
-  return team.trim().replace(/\s+/g, " ");
+  return team
+    .trim()
+    .replace(/[,\s]+$/, "")
+    .replace(/\s+/g, " ");
 }
 
 /**
