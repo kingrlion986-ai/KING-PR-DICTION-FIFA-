@@ -116,8 +116,6 @@ app.use((req, res) => {
 });
 
 // Démarrage
-app.listen(PORT, () => {
-  console.log(
-    `ROI Prediction FIFA running on port ${PORT}`
-  );
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`ROI Prediction FIFA running on port ${PORT}`);
 });
