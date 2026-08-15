@@ -1,7 +1,18 @@
 const { getTeamMatches } = require("./dataEngine");
 
+function clean(name) {
+  return String(name || "")
+    .trim()
+    .replace(/[,\s]+$/, "")
+    .replace(/\s+/g, " ");
+}
+
 function analyzeTeam(team) {
-  const matches = getTeamMatches(team);
+  team = clean(team);
+
+  const matches = getTeamMatches(team)
+    .filter(m => clean(m.home) === team || clean(m.away) === team)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   if (!matches.length) {
     return {
@@ -21,13 +32,13 @@ function analyzeTeam(team) {
   let scored = 0;
   let conceded = 0;
   let wins = 0;
-  let home = [];
-  let away = [];
+  const home = [];
+  const away = [];
 
   for (const m of matches) {
-    const isHome = m.home === team;
-    const s = isHome ? m.homeGoals : m.awayGoals;
-    const c = isHome ? m.awayGoals : m.homeGoals;
+    const isHome = clean(m.home) === team;
+    const s = Number(isHome ? m.homeGoals : m.awayGoals);
+    const c = Number(isHome ? m.awayGoals : m.homeGoals);
 
     scored += s;
     conceded += c;
@@ -37,12 +48,24 @@ function analyzeTeam(team) {
     (isHome ? home : away).push({ s, c });
   }
 
-  const avg = n => n ? n.reduce((a, b) => a + b, 0) / n.length : 0;
+  const avg = a =>
+    a.length
+      ? a.reduce((sum, x) => sum + x, 0) / a.length
+      : 0;
+
+  const recent = matches.slice(-5);
+
+  const form = recent.reduce((points, m) => {
+    const isHome = clean(m.home) === team;
+    const s = Number(isHome ? m.homeGoals : m.awayGoals);
+    const c = Number(isHome ? m.awayGoals : m.homeGoals);
+
+    return points + (s > c ? 3 : s === c ? 1 : 0);
+  }, 0) / recent.length;
 
   return {
     team,
     matches: matches.length,
-
     avgScored: scored / matches.length,
     avgConceded: conceded / matches.length,
 
@@ -53,15 +76,7 @@ function analyzeTeam(team) {
     awayAvgConceded: avg(away.map(x => x.c)),
 
     winRate: wins / matches.length,
-
-    form: matches
-      .slice(-5)
-      .reduce((p, m) => {
-        const isHome = m.home === team;
-        const s = isHome ? m.homeGoals : m.awayGoals;
-        const c = isHome ? m.awayGoals : m.homeGoals;
-        return p + (s > c ? 3 : s === c ? 1 : 0);
-      }, 0) / Math.min(5, matches.length)
+    form
   };
 }
 
