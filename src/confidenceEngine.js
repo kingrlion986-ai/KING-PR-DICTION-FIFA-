@@ -1,14 +1,21 @@
-function calculateConfidence(homeWin, draw, awayWin) {
+function calculateConfidence(
+  homeWin,
+  draw,
+  awayWin,
+  dataQuality
+) {
   const values = [homeWin, draw, awayWin]
     .sort((a, b) => b - a);
 
-  const separation = values[0] - values[1];
+  const gap = values[0] - values[1];
 
-  return Math.min(
-    95,
+  return Math.round(
     Math.max(
       30,
-      Math.round(50 + separation * 100)
+      Math.min(
+        90,
+        35 + gap * 100 + dataQuality * 0.2
+      )
     )
   );
 }
