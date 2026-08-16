@@ -81,7 +81,8 @@ function predictMatch(homeTeam, awayTeam) {
   calculateConfidence(
     markets.homeWin,
     markets.draw,
-    markets.awayWin
+    markets.awayWin,
+    dataQuality
   );
   
   let prediction;
