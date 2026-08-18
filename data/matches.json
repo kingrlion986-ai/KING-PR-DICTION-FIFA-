@@ -119,3 +119,112 @@
     }
   ]
 }
+
+      {
+  "date": "2026-08-15T20:10:00",
+  "home": "Everton",
+  "away": "Tottenham Hotspur",
+  "homeGoals": 0,
+  "awayGoals": 1,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T19:50:00",
+  "home": "Everton",
+  "away": "Fulham",
+  "homeGoals": 0,
+  "awayGoals": 1,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T13:50:00",
+  "home": "Burnley",
+  "away": "Everton",
+  "homeGoals": 1,
+  "awayGoals": 4,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T12:50:00",
+  "home": "Everton",
+  "away": "Aston Villa",
+  "homeGoals": 0,
+  "awayGoals": 3,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T07:30:00",
+  "home": "Manchester United",
+  "away": "Everton",
+  "homeGoals": 2,
+  "awayGoals": 1,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T05:50:00",
+  "home": "Everton",
+  "away": "Wolverhampton Wanderers",
+  "homeGoals": 0,
+  "awayGoals": 1,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T20:50:00",
+  "home": "Burnley",
+  "away": "Brighton et Hove Albion",
+  "homeGoals": 2,
+  "awayGoals": 0,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T19:10:00",
+  "home": "Brighton et Hove Albion",
+  "away": "Aston Villa",
+  "homeGoals": 3,
+  "awayGoals": 3,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T14:30:00",
+  "home": "Manchester United",
+  "away": "Brighton et Hove Albion",
+  "homeGoals": 5,
+  "awayGoals": 2,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T12:10:00",
+  "home": "Brighton et Hove Albion",
+  "away": "Wolverhampton Wanderers",
+  "homeGoals": 0,
+  "awayGoals": 3,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T08:10:00",
+  "home": "Arsenal",
+  "away": "Brighton et Hove Albion",
+  "homeGoals": 1,
+  "awayGoals": 4,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+},
+{
+  "date": "2026-08-15T05:10:00",
+  "home": "Brighton et Hove Albion",
+  "away": "West Ham United",
+  "homeGoals": 1,
+  "awayGoals": 0,
+  "competition": "FIFA FC 26. England Championship",
+  "source": "FIFA_VIRTUAL"
+}
