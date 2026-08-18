@@ -13,6 +13,10 @@ const {
   getTeams
 } = require("./src/dataEngine");
 
+const {
+  validatePredictions
+} = require("./src/validationEngine");
+
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -101,6 +105,20 @@ app.post("/api/matches", (req, res) => {
 
   } catch (error) {
     res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get("/api/validate", (req, res) => {
+  try {
+    res.json({
+      success: true,
+      validation: validatePredictions()
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
       error: error.message
     });
