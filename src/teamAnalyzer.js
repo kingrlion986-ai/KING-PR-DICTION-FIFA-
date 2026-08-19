@@ -7,6 +7,38 @@ function clean(name) {
     .replace(/\s+/g, " ");
 }
 
+/*
+ * Poids des matchs selon leur ancienneté.
+ * Les matchs sont triés du plus ancien au plus récent.
+ */
+function getRecentWeight(index, total) {
+  const age = total - 1 - index;
+
+  if (age === 0) return 1.00; // dernier match
+  if (age === 1) return 0.85;
+  if (age === 2) return 0.70;
+  if (age === 3) return 0.55;
+  if (age === 4) return 0.40;
+
+  return 0.25;
+}
+
+function weightedAverage(values) {
+  if (!values.length) return 0;
+
+  let total = 0;
+  let weightTotal = 0;
+
+  for (const item of values) {
+    total += item.value * item.weight;
+    weightTotal += item.weight;
+  }
+
+  return weightTotal
+    ? total / weightTotal
+    : 0;
+}
+
 function analyzeTeam(team) {
   team = clean(team);
 
@@ -36,14 +68,19 @@ function analyzeTeam(team) {
     };
   }
 
-  let scored = 0;
-  let conceded = 0;
+  const scored = [];
+  const conceded = [];
+  const homeScored = [];
+  const homeConceded = [];
+  const awayScored = [];
+  const awayConceded = [];
+
   let wins = 0;
+  let weightedWins = 0;
+  let totalWeight = 0;
 
-  const home = [];
-  const away = [];
-
-  for (const m of matches) {
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
 
     const isHome =
       clean(m.home) === team;
@@ -60,95 +97,135 @@ function analyzeTeam(team) {
         : m.homeGoals
     );
 
-    scored += s;
-    conceded += c;
+    const weight =
+      getRecentWeight(
+        i,
+        matches.length
+      );
+
+    scored.push({
+      value: s,
+      weight
+    });
+
+    conceded.push({
+      value: c,
+      weight
+    });
+
+    if (isHome) {
+      homeScored.push({
+        value: s,
+        weight
+      });
+
+      homeConceded.push({
+        value: c,
+        weight
+      });
+    } else {
+      awayScored.push({
+        value: s,
+        weight
+      });
+
+      awayConceded.push({
+        value: c,
+        weight
+      });
+    }
 
     if (s > c) {
       wins++;
+      weightedWins += weight;
     }
 
-    if (isHome) {
-      home.push({ s, c });
-    } else {
-      away.push({ s, c });
-    }
+    totalWeight += weight;
   }
 
-  const avg = values =>
-    values.length
-      ? values.reduce(
-          (sum, value) => sum + value,
-          0
-        ) / values.length
-      : 0;
+  /*
+   * Forme récente :
+   * on garde les 5 derniers matchs,
+   * avec davantage de poids pour les plus récents.
+   */
+  const recent =
+    matches.slice(-5);
 
+  let formPoints = 0;
+  let formWeight = 0;
 
-  // 5 derniers matchs
-  const recent = matches.slice(-5);
+  for (
+    let i = 0;
+    i < recent.length;
+    i++
+  ) {
+    const m = recent[i];
 
-  const formPoints =
-    recent.reduce(
-      (points, m) => {
+    const isHome =
+      clean(m.home) === team;
 
-        const isHome =
-          clean(m.home) === team;
-
-        const s = Number(
-          isHome
-            ? m.homeGoals
-            : m.awayGoals
-        );
-
-        const c = Number(
-          isHome
-            ? m.awayGoals
-            : m.homeGoals
-        );
-
-        if (s > c) {
-          return points + 3;
-        }
-
-        if (s === c) {
-          return points + 1;
-        }
-
-        return points;
-      },
-      0
+    const s = Number(
+      isHome
+        ? m.homeGoals
+        : m.awayGoals
     );
 
-  const form =
-    formPoints / recent.length;
+    const c = Number(
+      isHome
+        ? m.awayGoals
+        : m.homeGoals
+    );
 
+    const weight =
+      getRecentWeight(
+        matches.length - recent.length + i,
+        matches.length
+      );
+
+    const points =
+      s > c
+        ? 3
+        : s === c
+        ? 1
+        : 0;
+
+    formPoints +=
+      points * weight;
+
+    formWeight += weight;
+  }
 
   return {
     team,
-
     matches: matches.length,
 
     avgScored:
-      scored / matches.length,
+      weightedAverage(scored),
 
     avgConceded:
-      conceded / matches.length,
+      weightedAverage(conceded),
 
     homeAvgScored:
-      avg(home.map(x => x.s)),
+      weightedAverage(homeScored),
 
     homeAvgConceded:
-      avg(home.map(x => x.c)),
+      weightedAverage(homeConceded),
 
     awayAvgScored:
-      avg(away.map(x => x.s)),
+      weightedAverage(awayScored),
 
     awayAvgConceded:
-      avg(away.map(x => x.c)),
+      weightedAverage(awayConceded),
 
     winRate:
-      wins / matches.length,
+      totalWeight
+        ? weightedWins / totalWeight
+        : wins / matches.length,
 
-    form
+    form:
+      formWeight
+        ? formPoints / formWeight
+        : 0
   };
 }
 
