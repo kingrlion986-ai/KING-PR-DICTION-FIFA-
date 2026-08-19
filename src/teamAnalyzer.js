@@ -11,8 +11,15 @@ function analyzeTeam(team) {
   team = clean(team);
 
   const matches = getTeamMatches(team)
-    .filter(m => clean(m.home) === team || clean(m.away) === team)
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+    .filter(
+      m =>
+        clean(m.home) === team ||
+        clean(m.away) === team
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.date) - new Date(b.date)
+    );
 
   if (!matches.length) {
     return {
@@ -32,52 +39,119 @@ function analyzeTeam(team) {
   let scored = 0;
   let conceded = 0;
   let wins = 0;
+
   const home = [];
   const away = [];
 
   for (const m of matches) {
-    const isHome = clean(m.home) === team;
-    const s = Number(isHome ? m.homeGoals : m.awayGoals);
-    const c = Number(isHome ? m.awayGoals : m.homeGoals);
+
+    const isHome =
+      clean(m.home) === team;
+
+    const s = Number(
+      isHome
+        ? m.homeGoals
+        : m.awayGoals
+    );
+
+    const c = Number(
+      isHome
+        ? m.awayGoals
+        : m.homeGoals
+    );
 
     scored += s;
     conceded += c;
 
-    if (s > c) wins++;
+    if (s > c) {
+      wins++;
+    }
 
-    (isHome ? home : away).push({ s, c });
+    if (isHome) {
+      home.push({ s, c });
+    } else {
+      away.push({ s, c });
+    }
   }
 
-  const avg = a =>
-    a.length
-      ? a.reduce((sum, x) => sum + x, 0) / a.length
+  const avg = values =>
+    values.length
+      ? values.reduce(
+          (sum, value) => sum + value,
+          0
+        ) / values.length
       : 0;
 
+
+  // 5 derniers matchs
   const recent = matches.slice(-5);
 
-  const form = recent.reduce((points, m) => {
-    const isHome = clean(m.home) === team;
-    const s = Number(isHome ? m.homeGoals : m.awayGoals);
-    const c = Number(isHome ? m.awayGoals : m.homeGoals);
+  const formPoints =
+    recent.reduce(
+      (points, m) => {
 
-    return points + (s > c ? 3 : s === c ? 1 : 0);
-  }, 0) / recent.length;
+        const isHome =
+          clean(m.home) === team;
+
+        const s = Number(
+          isHome
+            ? m.homeGoals
+            : m.awayGoals
+        );
+
+        const c = Number(
+          isHome
+            ? m.awayGoals
+            : m.homeGoals
+        );
+
+        if (s > c) {
+          return points + 3;
+        }
+
+        if (s === c) {
+          return points + 1;
+        }
+
+        return points;
+      },
+      0
+    );
+
+  const form =
+    formPoints / recent.length;
+
 
   return {
     team,
+
     matches: matches.length,
-    avgScored: scored / matches.length,
-    avgConceded: conceded / matches.length,
 
-    homeAvgScored: avg(home.map(x => x.s)),
-    homeAvgConceded: avg(home.map(x => x.c)),
+    avgScored:
+      scored / matches.length,
 
-    awayAvgScored: avg(away.map(x => x.s)),
-    awayAvgConceded: avg(away.map(x => x.c)),
+    avgConceded:
+      conceded / matches.length,
 
-    winRate: wins / matches.length,
+    homeAvgScored:
+      avg(home.map(x => x.s)),
+
+    homeAvgConceded:
+      avg(home.map(x => x.c)),
+
+    awayAvgScored:
+      avg(away.map(x => x.s)),
+
+    awayAvgConceded:
+      avg(away.map(x => x.c)),
+
+    winRate:
+      wins / matches.length,
+
     form
   };
 }
 
-module.exports = { analyzeTeam };
+module.exports = {
+  analyzeTeam
+};
