@@ -1,4 +1,5 @@
 const { analyzeTeam } = require("./teamAnalyzer");
+
 const {
   buildPoissonMatrix,
   calculateMarkets,
@@ -17,13 +18,28 @@ const {
   calculateDataQuality
 } = require("./qualityEngine");
 
+
 function round(value, decimals = 2) {
   return Number(value.toFixed(decimals));
 }
 
+
 function percentage(value) {
   return round(value * 100, 1);
 }
+
+
+function cleanTeamName(team) {
+  if (typeof team !== "string") {
+    return "";
+  }
+
+  return team
+    .trim()
+    .replace(/[,\s]+$/, "")
+    .replace(/\s+/g, " ");
+}
+
 
 function getWinner(markets) {
   const options = [
@@ -46,15 +62,35 @@ function getWinner(markets) {
   )[0];
 }
 
+
 function predictMatch(homeTeam, awayTeam) {
-  const homeStats = analyzeTeam(homeTeam);
-  const awayStats = analyzeTeam(awayTeam);
+
+  const home = cleanTeamName(homeTeam);
+  const away = cleanTeamName(awayTeam);
+
+  if (!home || !away) {
+    throw new Error(
+      "Les deux équipes sont obligatoires."
+    );
+  }
+
+  if (home === away) {
+    throw new Error(
+      "Les deux équipes doivent être différentes."
+    );
+  }
+
+
+  const homeStats = analyzeTeam(home);
+  const awayStats = analyzeTeam(away);
+
 
   const dataQuality =
-  calculateDataQuality(
-    homeStats.matches,
-    awayStats.matches
-  );
+    calculateDataQuality(
+      homeStats.matches,
+      awayStats.matches
+    );
+
 
   const expectedGoals =
     calculateExpectedGoals(
@@ -62,81 +98,131 @@ function predictMatch(homeTeam, awayTeam) {
       awayStats
     );
 
+
   const matrix =
     buildPoissonMatrix(
       expectedGoals.homeXG,
       expectedGoals.awayXG
     );
 
+
   const markets =
     calculateMarkets(matrix);
+
 
   const topScores =
     getTopScores(matrix, 3);
 
+
   const winner =
     getWinner(markets);
 
+
   const confidence =
-  calculateConfidence(
-    markets.homeWin,
-    markets.draw,
-    markets.awayWin,
-    dataQuality
-  );
-  
+    calculateConfidence(
+      markets.homeWin,
+      markets.draw,
+      markets.awayWin,
+      dataQuality
+    );
+
+
   let prediction;
 
   if (winner.type === "HOME") {
-    prediction = homeTeam;
+    prediction = home;
   } else if (winner.type === "AWAY") {
-    prediction = awayTeam;
+    prediction = away;
   } else {
     prediction = "DRAW";
   }
 
+
   return {
+
     match: {
-      home: homeTeam,
-      away: awayTeam
+      home,
+      away
     },
+
 
     teams: {
       home: homeStats,
       away: awayStats
     },
 
+
     expectedGoals: {
-      home: round(expectedGoals.homeXG, 3),
-      away: round(expectedGoals.awayXG, 3)
+      home: round(
+        expectedGoals.homeXG,
+        3
+      ),
+
+      away: round(
+        expectedGoals.awayXG,
+        3
+      )
     },
 
+
     predictions: {
+
       winner: prediction,
+
       dataQuality,
 
-      homeWin: percentage(markets.homeWin),
-      draw: percentage(markets.draw),
-      awayWin: percentage(markets.awayWin),
+      homeWin:
+        percentage(
+          markets.homeWin
+        ),
 
-      over25: percentage(markets.over25),
-      under25: percentage(markets.under25),
+      draw:
+        percentage(
+          markets.draw
+        ),
 
-      bttsYes: percentage(markets.bttsYes),
-      bttsNo: percentage(markets.bttsNo),
+      awayWin:
+        percentage(
+          markets.awayWin
+        ),
+
+      over25:
+        percentage(
+          markets.over25
+        ),
+
+      under25:
+        percentage(
+          markets.under25
+        ),
+
+      bttsYes:
+        percentage(
+          markets.bttsYes
+        ),
+
+      bttsNo:
+        percentage(
+          markets.bttsNo
+        ),
 
       confidence
     },
 
-    topScores: topScores.map(score => ({
-      score:
-        `${score.homeGoals}-${score.awayGoals}`,
 
-      probability:
-        percentage(score.probability)
-    }))
+    topScores:
+      topScores.map(score => ({
+        score:
+          `${score.homeGoals}-${score.awayGoals}`,
+
+        probability:
+          percentage(
+            score.probability
+          )
+      }))
   };
 }
+
 
 module.exports = {
   predictMatch
