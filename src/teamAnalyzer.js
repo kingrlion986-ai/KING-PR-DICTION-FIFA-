@@ -1,4 +1,7 @@
-const { getTeamMatches } = require("./dataEngine");
+const {
+  getTeamMatches,
+  getHeadToHead
+} = require("./dataEngine");
 
 function clean(name) {
   return String(name || "")
@@ -8,13 +11,12 @@ function clean(name) {
 }
 
 /*
- * Poids des matchs selon leur ancienneté.
- * Les matchs sont triés du plus ancien au plus récent.
+ * Poids selon l'ancienneté du match.
  */
 function getRecentWeight(index, total) {
   const age = total - 1 - index;
 
-  if (age === 0) return 1.00; // dernier match
+  if (age === 0) return 1.00;
   if (age === 1) return 0.85;
   if (age === 2) return 0.70;
   if (age === 3) return 0.55;
@@ -37,6 +39,139 @@ function weightedAverage(values) {
   return weightTotal
     ? total / weightTotal
     : 0;
+}
+
+/*
+ * Analyse les confrontations directes.
+ */
+function analyzeH2H(homeTeam, awayTeam) {
+  const home = clean(homeTeam);
+  const away = clean(awayTeam);
+
+  const matches = getHeadToHead(
+    home,
+    away
+  ).sort(
+    (a, b) =>
+      new Date(a.date) - new Date(b.date)
+  );
+
+  if (!matches.length) {
+    return {
+      matches: 0,
+      homeAvgScored: 0,
+      homeAvgConceded: 0,
+      awayAvgScored: 0,
+      awayAvgConceded: 0,
+      homeWinRate: 0,
+      drawRate: 0,
+      awayWinRate: 0
+    };
+  }
+
+  let homeScored = [];
+  let homeConceded = [];
+  let awayScored = [];
+  let awayConceded = [];
+
+  let homeWins = 0;
+  let draws = 0;
+  let awayWins = 0;
+
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+
+    const isHome =
+      clean(m.home) === home;
+
+    const homeGoals = Number(
+      isHome
+        ? m.homeGoals
+        : m.awayGoals
+    );
+
+    const awayGoals = Number(
+      isHome
+        ? m.awayGoals
+        : m.homeGoals
+    );
+
+    /*
+     * Les confrontations récentes ont
+     * également plus de poids.
+     */
+    const weight =
+      getRecentWeight(
+        i,
+        matches.length
+      );
+
+    homeScored.push({
+      value: homeGoals,
+      weight
+    });
+
+    homeConceded.push({
+      value: awayGoals,
+      weight
+    });
+
+    awayScored.push({
+      value: awayGoals,
+      weight
+    });
+
+    awayConceded.push({
+      value: homeGoals,
+      weight
+    });
+
+    if (homeGoals > awayGoals) {
+      homeWins += weight;
+    } else if (
+      homeGoals === awayGoals
+    ) {
+      draws += weight;
+    } else {
+      awayWins += weight;
+    }
+  }
+
+  const totalWeight =
+    homeWins +
+    draws +
+    awayWins;
+
+  return {
+    matches: matches.length,
+
+    homeAvgScored:
+      weightedAverage(homeScored),
+
+    homeAvgConceded:
+      weightedAverage(homeConceded),
+
+    awayAvgScored:
+      weightedAverage(awayScored),
+
+    awayAvgConceded:
+      weightedAverage(awayConceded),
+
+    homeWinRate:
+      totalWeight
+        ? homeWins / totalWeight
+        : 0,
+
+    drawRate:
+      totalWeight
+        ? draws / totalWeight
+        : 0,
+
+    awayWinRate:
+      totalWeight
+        ? awayWins / totalWeight
+        : 0
+  };
 }
 
 function analyzeTeam(team) {
@@ -144,9 +279,7 @@ function analyzeTeam(team) {
   }
 
   /*
-   * Forme récente :
-   * on garde les 5 derniers matchs,
-   * avec davantage de poids pour les plus récents.
+   * Forme récente pondérée.
    */
   const recent =
     matches.slice(-5);
@@ -176,9 +309,14 @@ function analyzeTeam(team) {
         : m.homeGoals
     );
 
+    const originalIndex =
+      matches.length -
+      recent.length +
+      i;
+
     const weight =
       getRecentWeight(
-        matches.length - recent.length + i,
+        originalIndex,
         matches.length
       );
 
@@ -230,5 +368,6 @@ function analyzeTeam(team) {
 }
 
 module.exports = {
-  analyzeTeam
+  analyzeTeam,
+  analyzeH2H
 };
