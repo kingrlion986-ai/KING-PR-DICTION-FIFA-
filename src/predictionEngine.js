@@ -57,28 +57,35 @@ function getWinner(markets) {
  * 80% forme/statistiques
  * 20% H2H
  */
-function applyH2H(
-  expectedGoals,
-  h2h
-) {
+function applyH2H(expectedGoals, h2h) {
   if (!h2h || h2h.matches === 0) {
     return expectedGoals;
   }
 
-  const H2H_WEIGHT = 0.20;
-  const GENERAL_WEIGHT = 0.80;
+  let H2H_WEIGHT = 0;
+
+  if (h2h.matches === 1) {
+    H2H_WEIGHT = 0.05;
+  } else if (h2h.matches === 2) {
+    H2H_WEIGHT = 0.08;
+  } else if (h2h.matches === 3) {
+    H2H_WEIGHT = 0.12;
+  } else if (h2h.matches === 4) {
+    H2H_WEIGHT = 0.16;
+  } else {
+    H2H_WEIGHT = 0.20;
+  }
+
+  const GENERAL_WEIGHT =
+    1 - H2H_WEIGHT;
 
   const homeXG =
-    expectedGoals.homeXG *
-      GENERAL_WEIGHT +
-    h2h.homeAvgScored *
-      H2H_WEIGHT;
+    expectedGoals.homeXG * GENERAL_WEIGHT +
+    h2h.homeAvgScored * H2H_WEIGHT;
 
   const awayXG =
-    expectedGoals.awayXG *
-      GENERAL_WEIGHT +
-    h2h.awayAvgScored *
-      H2H_WEIGHT;
+    expectedGoals.awayXG * GENERAL_WEIGHT +
+    h2h.awayAvgScored * H2H_WEIGHT;
 
   return {
     homeXG: Math.max(
