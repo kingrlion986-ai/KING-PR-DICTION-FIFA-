@@ -1,1288 +1,268 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROI PREDICTION FIFA</title>
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <title>ROI PREDICTION FIFA</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-    }
-
-    .container {
-      width: min(100% - 30px, 900px);
-      margin: 0 auto;
-      padding: 30px 0 50px;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-
-    .header h1 {
-      margin: 0 0 8px;
-      font-size: 30px;
-    }
-
-    .header p {
-      margin: 0;
-      color: #94a3b8;
-    }
-
-    .card {
-      background: #1e293b;
-      border-radius: 16px;
-      padding: 22px;
-      margin-bottom: 18px;
-      border: 1px solid #334155;
-    }
-
-    .teams {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: bold;
-    }
-
-    input {
-      width: 100%;
-      padding: 14px;
-      border-radius: 10px;
-      border: 1px solid #475569;
-      background: #0f172a;
-      color: white;
-      font-size: 16px;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: #38bdf8;
-    }
-
-    button {
-      width: 100%;
-      margin-top: 18px;
-      padding: 15px;
-      border: none;
-      border-radius: 10px;
-      background: #2563eb;
-      color: white;
-      font-size: 17px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #1d4ed8;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: wait;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .error {
-      background: #7f1d1d;
-      color: #fecaca;
-      padding: 14px;
-      border-radius: 10px;
-      margin-bottom: 18px;
-    }
-
-    .winner {
-      text-align: center;
-    }
-
-    .winner-title {
-      color: #94a3b8;
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-
-    .winner-name {
-      font-size: 30px;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .confidence {
-      color: #38bdf8;
-      font-weight: bold;
-    }
-
-    .probabilities {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .probability {
-      background: #0f172a;
-      padding: 15px;
-      border-radius: 10px;
-      text-align: center;
-    }
-
-    .probability strong {
-      display: block;
-      font-size: 24px;
-      margin-top: 5px;
-    }
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-
-    .stat {
-      background: #0f172a;
-      padding: 15px;
-      border-radius: 10px;
-    }
-
-    .stat-title {
-      color: #94a3b8;
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-
-    .stat-value {
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    .teams-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-    }
-
-    .team-box {
-      background: #0f172a;
-      padding: 18px;
-      border-radius: 12px;
-    }
-
-    .team-box h3 {
-      margin-top: 0;
-    }
-
-    .row {
-      display: flex;
-      justify-content: space-between;
-      padding: 7px 0;
-      border-bottom: 1px solid #1e293b;
-    }
-
-    .row:last-child {
-      border-bottom: none;
-    }
-
-    .scores {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-
-    .score {
-      text-align: center;
-      background: #0f172a;
-      padding: 18px 10px;
-      border-radius: 10px;
-    }
-
-    .score-main {
-      font-size: 25px;
-      font-weight: bold;
-    }
-
-    .score-prob {
-      color: #94a3b8;
-      margin-top: 5px;
-    }
-
-    .match-title {
-      text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-
-    .match-subtitle {
-      text-align: center;
-      color: #94a3b8;
-      margin-bottom: 20px;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 20px;
-      color: #94a3b8;
-    }
-
-    @media (max-width: 650px) {
-      .teams,
-      .teams-stats {
-        grid-template-columns: 1fr;
-      }
-
-      .probabilities {
-        grid-template-columns: 1fr;
-      }
-
-      .scores {
-        grid-template-columns: 1fr;
-      }
-
-      .stats {
-        grid-template-columns: 1fr;
-      }
-
-      .header h1 {
-        font-size: 24px;
-      }
-    }
-  </style>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f172a;color:#fff;font-family:Arial}
+.container{max-width:800px;margin:auto;padding:20px 15px}
+h1{text-align:center;font-size:25px}
+.subtitle{text-align:center;color:#94a3b8;margin-bottom:20px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;margin-bottom:6px;font-weight:bold}
+input{width:100%;padding:12px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:white;font-size:16px}
+button{width:100%;padding:13px;margin-top:12px;border:0;border-radius:8px;background:#2563eb;color:white;font-weight:bold;font-size:16px}
+button:disabled{opacity:.5}
+.hidden{display:none}
+.error{background:#7f1d1d;padding:12px;border-radius:8px}
+.center{text-align:center}
+.winner{font-size:27px;font-weight:bold}
+.blue{color:#38bdf8}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.box{background:#0f172a;padding:12px;border-radius:8px;text-align:center}
+.big{font-size:21px;font-weight:bold;margin-top:5px}
+.rows{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row{background:#0f172a;padding:10px;border-radius:8px}
+.small{color:#94a3b8;font-size:13px}
+.scores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.score{text-align:center;background:#0f172a;padding:12px;border-radius:8px}
+.score strong{font-size:22px}
+.teamgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.team{background:#0f172a;padding:12px;border-radius:8px}
+.line{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1e293b}
+@media(max-width:600px){
+.grid,.teamgrid,.rows{grid-template-columns:1fr}
+.grid3,.scores{grid-template-columns:repeat(3,1fr)}
+}
+</style>
 </head>
 
 <body>
+<main class="container">
+
+<h1>⚽ ROI PREDICTION FIFA</h1>
+<div class="subtitle">FIFA FC 26 — England Championship</div>
+
+<section class="card">
+<div class="grid">
+<div>
+<label>Équipe domicile</label>
+<input id="homeTeam" placeholder="Chelsea">
+</div>
+<div>
+<label>Équipe extérieur</label>
+<input id="awayTeam" placeholder="Leeds United">
+</div>
+</div>
+<button id="predictBtn">🔮 PRÉDICTION</button>
+</section>
+
+<div id="error" class="error hidden"></div>
+<div id="loading" class="card center hidden">Analyse en cours...</div>
+
+<div id="results" class="hidden">
+
+<section class="card center">
+<div id="match" class="big"></div>
+<div class="small">Analyse FIFA Virtual AI</div>
+</section>
+
+<section class="card center">
+<div class="small">VAINQUEUR PROBABLE</div>
+<div id="winner" class="winner"></div>
+<div>Confiance : <b id="confidence" class="blue"></b>%</div>
+</section>
+
+<section class="card">
+<h3>📊 Probabilités</h3>
+<div class="grid3">
+<div class="box">Domicile<div id="homeWin" class="big"></div></div>
+<div class="box">Nul<div id="draw" class="big"></div></div>
+<div class="box">Extérieur<div id="awayWin" class="big"></div></div>
+</div>
+</section>
+
+<section class="card">
+<h3>⚽ Buts attendus</h3>
+<div class="grid3">
+<div class="box" id="homeXG"></div>
+<div class="box">VS</div>
+<div class="box" id="awayXG"></div>
+</div>
+</section>
+
+<section class="card">
+<h3>📈 Marchés</h3>
+<div class="rows">
+<div class="row">Over 2.5 <b id="over25"></b></div>
+<div class="row">Under 2.5 <b id="under25"></b></div>
+<div class="row">BTTS Oui <b id="bttsYes"></b></div>
+<div class="row">BTTS Non <b id="bttsNo"></b></div>
+</div>
+</section>
+
+<section class="card">
+<h3>🎯 Scores probables</h3>
+<div id="scores" class="scores"></div>
+</section>
+
+<section class="card">
+<h3>⚔️ H2H</h3>
+<div class="rows">
+<div class="row">Matchs <b id="h2hMatches"></b></div>
+<div class="row">Domicile <b id="h2hHome"></b></div>
+<div class="row">Nuls <b id="h2hDraw"></b></div>
+<div class="row">Extérieur <b id="h2hAway"></b></div>
+</div>
+</section>
+
+<section class="card">
+<h3>📚 Statistiques</h3>
+<div class="teamgrid">
+<div class="team">
+<h3 id="homeName"></h3>
+<div class="line">Matchs <b id="hm"></b></div>
+<div class="line">Buts marqués <b id="hs"></b></div>
+<div class="line">Buts encaissés <b id="hc"></b></div>
+<div class="line">Victoire <b id="hw"></b></div>
+<div class="line">Forme <b id="hf"></b></div>
+</div>
+
+<div class="team">
+<h3 id="awayName"></h3>
+<div class="line">Matchs <b id="am"></b></div>
+<div class="line">Buts marqués <b id="as"></b></div>
+<div class="line">Buts encaissés <b id="ac"></b></div>
+<div class="line">Victoire <b id="aw"></b></div>
+<div class="line">Forme <b id="af"></b></div>
+</div>
+</div>
+</section>
+
+<section class="card center">
+🧠 Qualité des données :
+<b id="quality"></b>%
+</section>
 
-  <main class="container">
+</div>
+</main>
 
-    <header class="header">
-      <h1>⚽ ROI PREDICTION FIFA</h1>
-      <p>FIFA FC 26 — England Championship</p>
-    </header>
-
-
-    <!-- FORMULAIRE -->
-
-    <section class="card">
-
-      <div class="teams">
-
-        <div>
-          <label for="homeTeam">
-            Équipe domicile
-          </label>
-
-          <input
-            id="homeTeam"
-            type="text"
-            placeholder="Ex : Chelsea"
-            autocomplete="off"
-          >
-        </div>
-
-
-        <div>
-          <label for="awayTeam">
-            Équipe extérieur
-          </label>
-
-          <input
-            id="awayTeam"
-            type="text"
-            placeholder="Ex : Leeds United"
-            autocomplete="off"
-          >
-        </div>
-
-      </div>
-
-
-      <button id="predictButton">
-        🔮 PRÉDICTION
-      </button>
-
-    </section>
-
-
-    <!-- ERREUR -->
-
-    <div
-      id="error"
-      class="error hidden"
-    ></div>
-
-
-    <!-- CHARGEMENT -->
-
-    <div
-      id="loading"
-      class="card loading hidden"
-    >
-      Analyse des données FIFA FC 26...
-    </div>
-
-
-    <!-- RÉSULTATS -->
-
-    <div id="results" class="hidden">
-
-
-      <!-- MATCH -->
-
-      <section class="card">
-
-        <div
-          id="matchTitle"
-          class="match-title"
-        ></div>
-
-        <div class="match-subtitle">
-          Analyse FIFA Virtual AI
-        </div>
-
-      </section>
-
-
-      <!-- VAINQUEUR -->
-
-      <section class="card winner">
-
-        <div class="winner-title">
-          VAINQUEUR PROBABLE
-        </div>
-
-        <div
-          id="winner"
-          class="winner-name"
-        ></div>
-
-        <div>
-          Confiance :
-          <span
-            id="confidence"
-            class="confidence"
-          ></span>%
-        </div>
-
-      </section>
-
-
-      <!-- PROBABILITÉS -->
-
-      <section class="card">
-
-        <h2>📊 Probabilités</h2>
-
-        <div class="probabilities">
-
-          <div class="probability">
-            Domicile
-            <strong id="homeWin">-</strong>
-          </div>
-
-          <div class="probability">
-            Nul
-            <strong id="draw">-</strong>
-          </div>
-
-          <div class="probability">
-            Extérieur
-            <strong id="awayWin">-</strong>
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- BUTS ATTENDUS -->
-
-      <section class="card">
-
-        <h2>⚽ Buts attendus</h2>
-
-        <div class="stats">
-
-          <div class="stat">
-
-            <div
-              id="homeXGLabel"
-              class="stat-title"
-            >
-              Domicile
-            </div>
-
-            <div
-              id="homeXG"
-              class="stat-value"
-            >
-              -
-            </div>
-
-          </div>
-
-
-          <div class="stat">
-
-            <div
-              id="awayXGLabel"
-              class="stat-title"
-            >
-              Extérieur
-            </div>
-
-            <div
-              id="awayXG"
-              class="stat-value"
-            >
-              -
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- MARCHÉS -->
-
-      <section class="card">
-
-        <h2>📈 Marchés</h2>
-
-        <div class="stats">
-
-          <div class="stat">
-            <div class="stat-title">
-              Over 2.5
-            </div>
-
-            <div
-              id="over25"
-              class="stat-value"
-            >
-              -
-            </div>
-          </div>
-
-
-          <div class="stat">
-            <div class="stat-title">
-              Under 2.5
-            </div>
-
-            <div
-              id="under25"
-              class="stat-value"
-            >
-              -
-            </div>
-          </div>
-
-
-          <div class="stat">
-            <div class="stat-title">
-              BTTS — Oui
-            </div>
-
-            <div
-              id="bttsYes"
-              class="stat-value"
-            >
-              -
-            </div>
-          </div>
-
-
-          <div class="stat">
-            <div class="stat-title">
-              BTTS — Non
-            </div>
-
-            <div
-              id="bttsNo"
-              class="stat-value"
-            >
-              -
-            </div>
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- SCORES -->
-
-      <section class="card">
-
-        <h2>🎯 Scores les plus probables</h2>
-
-        <div
-          id="topScores"
-          class="scores"
-        ></div>
-
-      </section>
-
-
-      <!-- H2H -->
-
-      <section class="card">
-
-        <h2>⚔️ Confrontations directes</h2>
-
-        <div class="stats">
-
-          <div class="stat">
-
-            <div class="stat-title">
-              Matchs H2H
-            </div>
-
-            <div
-              id="h2hMatches"
-              class="stat-value"
-            >
-              -
-            </div>
-
-          </div>
-
-
-          <div class="stat">
-
-            <div class="stat-title">
-              Victoires domicile
-            </div>
-
-            <div
-              id="h2hHomeWin"
-              class="stat-value"
-            >
-              -
-            </div>
-
-          </div>
-
-
-          <div class="stat">
-
-            <div class="stat-title">
-              Matchs nuls
-            </div>
-
-            <div
-              id="h2hDraw"
-              class="stat-value"
-            >
-              -
-            </div>
-
-          </div>
-
-
-          <div class="stat">
-
-            <div class="stat-title">
-              Victoires extérieur
-            </div>
-
-            <div
-              id="h2hAwayWin"
-              class="stat-value"
-            >
-              -
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- STATISTIQUES ÉQUIPES -->
-
-      <section class="card">
-
-        <h2>📚 Statistiques analysées</h2>
-
-        <div class="teams-stats">
-
-
-          <div class="team-box">
-
-            <h3 id="homeTeamName">
-              Domicile
-            </h3>
-
-            <div class="row">
-              <span>Matchs</span>
-              <strong id="homeMatches">-</strong>
-            </div>
-
-            <div class="row">
-              <span>Moy. buts marqués</span>
-              <strong id="homeAvgScored">-</strong>
-            </div>
-
-            <div class="row">
-              <span>Moy. buts encaissés</span>
-              <strong id="homeAvgConceded">-</strong>
-            </div>
-
-            <div class="row">
-              <span>Taux de victoire</span>
-              <strong id="homeWinRate">-</strong>
-            </div>
-
-            <div class="row">
-              <span>Forme</span>
-              <strong id="homeForm">-</strong>
-            </div>
-
-          </div>
-
-
-          <div class="team-box">
-
-            <h3 id="awayTeamName">
-              Extérieur
-            </h3>
-
-            <div class="row">
-              <span>Matchs</span>
-              <strong id="awayMatches">-</strong>
-            </div>
-
-            <div class="row">
-              <span>Moy. buts marqués</span>
-              <strong id="awayAvgScored">-</strong>
-            </div>
-
-            <div class="row">
-              <span>Moy. buts encaissés</span>
-              <strong id="awayAvgConceded">-</strong>
-            </div>
-
-            <div class="row">
-              <span>Taux de victoire</span>
-              <strong id="awayWinRate">-</strong>
-            </div>
-
-            <div class="row">
-              <span>Forme</span>
-              <strong id="awayForm">-</strong>
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- QUALITÉ -->
-
-      <section class="card">
-
-        <h2>🧠 Qualité des données</h2>
-
-        <div class="stats">
-
-          <div class="stat">
-
-            <div class="stat-title">
-              Données disponibles
-            </div>
-
-            <div
-              id="dataQuality"
-              class="stat-value"
-            >
-              -
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-    </div>
-
-  </main>
-
-
-  <script>
-
-    const homeInput =
-      document.getElementById("homeTeam");
-
-    const awayInput =
-      document.getElementById("awayTeam");
-
-    const button =
-      document.getElementById("predictButton");
-
-    const results =
-      document.getElementById("results");
-
-    const loading =
-      document.getElementById("loading");
-
-    const errorBox =
-      document.getElementById("error");
-
-
-    function showError(message) {
-
-      errorBox.textContent = message;
-
-      errorBox.classList.remove(
-        "hidden"
-      );
-
-      results.classList.add(
-        "hidden"
-      );
-    }
-
-
-    function clearError() {
-
-      errorBox.textContent = "";
-
-      errorBox.classList.add(
-        "hidden"
-      );
-    }
-
-
-    function setText(id, value) {
-
-      const element =
-        document.getElementById(id);
-
-      if (element) {
-        element.textContent = value;
-      }
-    }
-
-
-    function formatPercent(value) {
-
-      if (
-        value === null ||
-        value === undefined
-      ) {
-        return "-";
-      }
-
-      return `${Number(value).toFixed(1)}%`;
-    }
-
-
-    function formatNumber(value) {
-
-      if (
-        value === null ||
-        value === undefined
-      ) {
-        return "-";
-      }
-
-      return Number(value).toFixed(2);
-    }
-
-
-    async function predict() {
-
-      clearError();
-
-      const home =
-        homeInput.value.trim();
-
-      const away =
-        awayInput.value.trim();
-
-
-      if (!home || !away) {
-
-        showError(
-          "Veuillez entrer les deux équipes."
-        );
-
-        return;
-      }
-
-
-      if (
-        home.toLowerCase() ===
-        away.toLowerCase()
-      ) {
-
-        showError(
-          "Les deux équipes doivent être différentes."
-        );
-
-        return;
-      }
-
-
-      button.disabled = true;
-
-      loading.classList.remove(
-        "hidden"
-      );
-
-      results.classList.add(
-        "hidden"
-      );
-
-
-      try {
-
-        const url =
-          `/api/predict?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`;
-
-
-        const response =
-          await fetch(url);
-
-
-        const data =
-          await response.json();
-
-
-        if (!response.ok || !data.success) {
-
-          throw new Error(
-            data.message ||
-            "Impossible d'effectuer la prédiction."
-          );
-        }
-
-
-        displayPrediction(
-          data.prediction
-        );
-
-
-      } catch (error) {
-
-        console.error(error);
-
-        showError(
-          error.message ||
-          "Une erreur est survenue."
-        );
-
-      } finally {
-
-        button.disabled = false;
-
-        loading.classList.add(
-          "hidden"
-        );
-      }
-    }
-
-
-    function displayPrediction(
-      prediction
-    ) {
-
-      const home =
-        prediction.match.home;
-
-      const away =
-        prediction.match.away;
-
-
-      setText(
-        "matchTitle",
-        `${home} vs ${away}`
-      );
-
-
-      setText(
-        "winner",
-        prediction.predictions.winner
-      );
-
-
-      setText(
-        "confidence",
-        prediction.predictions.confidence
-      );
-
-
-      setText(
-        "homeWin",
-        formatPercent(
-          prediction.predictions.homeWin
-        )
-      );
-
-
-      setText(
-        "draw",
-        formatPercent(
-          prediction.predictions.draw
-        )
-      );
-
-
-      setText(
-        "awayWin",
-        formatPercent(
-          prediction.predictions.awayWin
-        )
-      );
-
-
-      setText(
-        "homeXG",
-        formatNumber(
-          prediction.expectedGoals.home
-        )
-      );
-
-
-      setText(
-        "awayXG",
-        formatNumber(
-          prediction.expectedGoals.away
-        )
-      );
-
-
-      setText(
-        "homeXGLabel",
-        home
-      );
-
-
-      setText(
-        "awayXGLabel",
-        away
-      );
-
-
-      setText(
-        "over25",
-        formatPercent(
-          prediction.predictions.over25
-        )
-      );
-
-
-      setText(
-        "under25",
-        formatPercent(
-          prediction.predictions.under25
-        )
-      );
-
-
-      setText(
-        "bttsYes",
-        formatPercent(
-          prediction.predictions.bttsYes
-        )
-      );
-
-
-      setText(
-        "bttsNo",
-        formatPercent(
-          prediction.predictions.bttsNo
-        )
-      );
-
-
-      setText(
-        "homeTeamName",
-        home
-      );
-
-
-      setText(
-        "awayTeamName",
-        away
-      );
-
-
-      const homeStats =
-        prediction.teams.home;
-
-      const awayStats =
-        prediction.teams.away;
-
-
-      setText(
-        "homeMatches",
-        homeStats.matches
-      );
-
-
-      setText(
-        "homeAvgScored",
-        formatNumber(
-          homeStats.avgScored
-        )
-      );
-
-
-      setText(
-        "homeAvgConceded",
-        formatNumber(
-          homeStats.avgConceded
-        )
-      );
-
-
-      setText(
-        "homeWinRate",
-        formatPercent(
-          homeStats.winRate * 100
-        )
-      );
-
-
-      setText(
-        "homeForm",
-        formatNumber(
-          homeStats.form
-        )
-      );
-
-
-      setText(
-        "awayMatches",
-        awayStats.matches
-      );
-
-
-      setText(
-        "awayAvgScored",
-        formatNumber(
-          awayStats.avgScored
-        )
-      );
-
-
-      setText(
-        "awayAvgConceded",
-        formatNumber(
-          awayStats.avgConceded
-        )
-      );
-
-
-      setText(
-        "awayWinRate",
-        formatPercent(
-          awayStats.winRate * 100
-        )
-      );
-
-
-      setText(
-        "awayForm",
-        formatNumber(
-          awayStats.form
-        )
-      );
-
-
-      setText(
-        "dataQuality",
-        `${prediction.predictions.dataQuality}%`
-      );
-
-
-      /*
-       * H2H
-       */
-
-      if (prediction.h2h) {
-
-        setText(
-          "h2hMatches",
-          prediction.h2h.matches
-        );
-
-
-        setText(
-          "h2hHomeWin",
-          formatPercent(
-            prediction.h2h.homeWinRate
-          )
-        );
-
-
-        setText(
-          "h2hDraw",
-          formatPercent(
-            prediction.h2h.drawRate
-          )
-        );
-
-
-        setText(
-          "h2hAwayWin",
-          formatPercent(
-            prediction.h2h.awayWinRate
-          )
-        );
-
-      } else {
-
-        setText(
-          "h2hMatches",
-          "0"
-        );
-
-        setText(
-          "h2hHomeWin",
-          "0%"
-        );
-
-        setText(
-          "h2hDraw",
-          "0%"
-        );
-
-        setText(
-          "h2hAwayWin",
-          "0%"
-        );
-      }
-
-
-      /*
-       * Top scores
-       */
-
-      const scores =
-        document.getElementById(
-          "topScores"
-        );
-
-
-      scores.innerHTML = "";
-
-
-      if (
-        Array.isArray(
-          prediction.topScores
-        )
-      ) {
-
-        prediction.topScores.forEach(
-          score => {
-
-            const div =
-              document.createElement(
-                "div"
-              );
-
-            div.className =
-              "score";
-
-
-            const scoreMain =
-              document.createElement(
-                "div"
-              );
-
-            scoreMain.className =
-              "score-main";
-
-            scoreMain.textContent =
-              score.score;
-
-
-            const probability =
-              document.createElement(
-                "div"
-              );
-
-            probability.className =
-              "score-prob";
-
-            probability.textContent =
-              `${score.probability}%`;
-
-
-            div.appendChild(
-              scoreMain
-            );
-
-            div.appendChild(
-              probability
-            );
-
-            scores.appendChild(scoreCard);
-      });
-
-      // Affichage du bloc complet
-      resultBox.style.display = "block";
-
-    } catch (error) {
-      console.error(error);
-
-      resultBox.style.display = "block";
-      resultBox.innerHTML = `
-        <div class="error">
-          ❌ Impossible d'obtenir la prédiction.
-          <br>
-          Vérifiez les noms des équipes et que le serveur est en ligne.
-        </div>
-      `;
-    }
-  }
-
-  // Bouton PRÉDICTION
-  predictBtn.addEventListener("click", predict);
-
-  // Touche Entrée dans les deux champs
-  homeInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      predict();
-    }
-  });
-
-  awayInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      predict();
-    }
-  });
+<script>
+const $=id=>document.getElementById(id);
+const home=$("homeTeam"),away=$("awayTeam");
+const btn=$("predictBtn");
+
+const pct=v=>v==null?"-":Number(v).toFixed(1)+"%";
+const num=v=>v==null?"-":Number(v).toFixed(2);
+
+function error(msg){
+$("error").textContent=msg;
+$("error").classList.remove("hidden");
+$("results").classList.add("hidden");
+}
+
+function text(id,v){$(id).textContent=v??"-"}
+
+async function predict(){
+$("error").classList.add("hidden");
+
+let h=home.value.trim(),a=away.value.trim();
+
+if(!h||!a)return error("Entrez les deux équipes.");
+if(h.toLowerCase()==a.toLowerCase())
+return error("Les équipes doivent être différentes.");
+
+btn.disabled=true;
+$("loading").classList.remove("hidden");
+
+try{
+const r=await fetch(
+"/api/predict?home="+encodeURIComponent(h)+
+"&away="+encodeURIComponent(a)
+);
+
+const d=await r.json();
+
+if(!r.ok||!d.success)
+throw new Error(d.message||"Prédiction impossible.");
+
+show(d.prediction);
+
+}catch(e){
+console.error(e);
+error(e.message);
+}finally{
+btn.disabled=false;
+$("loading").classList.add("hidden");
+}
+}
+
+function show(p){
+$("results").classList.remove("hidden");
+
+const h=p.match.home,a=p.match.away;
+const hs=p.teams.home,as=p.teams.away;
+const pr=p.predictions;
+
+text("match",h+" vs "+a);
+text("winner",pr.winner);
+text("confidence",pr.confidence);
+
+text("homeWin",pct(pr.homeWin));
+text("draw",pct(pr.draw));
+text("awayWin",pct(pr.awayWin));
+
+text("homeXG",h+" : "+num(p.expectedGoals.home));
+text("awayXG",a+" : "+num(p.expectedGoals.away));
+
+text("over25",pct(pr.over25));
+text("under25",pct(pr.under25));
+text("bttsYes",pct(pr.bttsYes));
+text("bttsNo",pct(pr.bttsNo));
+text("quality",pr.dataQuality);
+
+text("homeName",h);
+text("awayName",a);
+
+text("hm",hs.matches);
+text("hs",num(hs.avgScored));
+text("hc",num(hs.avgConceded));
+text("hw",pct(hs.winRate*100));
+text("hf",num(hs.form));
+
+text("am",as.matches);
+text("as",num(as.avgScored));
+text("ac",num(as.avgConceded));
+text("aw",pct(as.winRate*100));
+text("af",num(as.form));
+
+const h2h=p.h2h;
+
+text("h2hMatches",h2h?.matches||0);
+text("h2hHome",pct(h2h?.homeWinRate||0));
+text("h2hDraw",pct(h2h?.drawRate||0));
+text("h2hAway",pct(h2h?.awayWinRate||0));
+
+const scores=$("scores");
+scores.innerHTML="";
+
+(p.topScores||[]).forEach(s=>{
+const d=document.createElement("div");
+d.className="score";
+d.innerHTML="<strong>"+s.score+"</strong><br>"+
+pct(s.probability);
+scores.appendChild(d);
+});
+}
+
+btn.addEventListener("click",predict);
+home.addEventListener("keydown",e=>{if(e.key=="Enter")predict()});
+away.addEventListener("keydown",e=>{if(e.key=="Enter")predict()});
 </script>
 
 </body>
 </html>
-       
