@@ -1,4 +1,7 @@
-const { analyzeTeam } = require("./teamAnalyzer");
+const {
+  analyzeTeam,
+  analyzeH2H
+} = require("./teamAnalyzer");
 
 const {
   buildPoissonMatrix,
@@ -18,28 +21,13 @@ const {
   calculateDataQuality
 } = require("./qualityEngine");
 
-
 function round(value, decimals = 2) {
   return Number(value.toFixed(decimals));
 }
 
-
 function percentage(value) {
   return round(value * 100, 1);
 }
-
-
-function cleanTeamName(team) {
-  if (typeof team !== "string") {
-    return "";
-  }
-
-  return team
-    .trim()
-    .replace(/[,\s]+$/, "")
-    .replace(/\s+/g, " ");
-}
-
 
 function getWinner(markets) {
   const options = [
@@ -62,28 +50,67 @@ function getWinner(markets) {
   )[0];
 }
 
-
-function predictMatch(homeTeam, awayTeam) {
-
-  const home = cleanTeamName(homeTeam);
-  const away = cleanTeamName(awayTeam);
-
-  if (!home || !away) {
-    throw new Error(
-      "Les deux équipes sont obligatoires."
-    );
+/*
+ * Mélange les statistiques générales
+ * avec les confrontations directes.
+ *
+ * 80% forme/statistiques
+ * 20% H2H
+ */
+function applyH2H(
+  expectedGoals,
+  h2h
+) {
+  if (!h2h || h2h.matches === 0) {
+    return expectedGoals;
   }
 
-  if (home === away) {
-    throw new Error(
-      "Les deux équipes doivent être différentes."
+  const H2H_WEIGHT = 0.20;
+  const GENERAL_WEIGHT = 0.80;
+
+  const homeXG =
+    expectedGoals.homeXG *
+      GENERAL_WEIGHT +
+    h2h.homeAvgScored *
+      H2H_WEIGHT;
+
+  const awayXG =
+    expectedGoals.awayXG *
+      GENERAL_WEIGHT +
+    h2h.awayAvgScored *
+      H2H_WEIGHT;
+
+  return {
+    homeXG: Math.max(
+      0.15,
+      Math.min(4.5, homeXG)
+    ),
+
+    awayXG: Math.max(
+      0.15,
+      Math.min(4.5, awayXG)
+    )
+  };
+}
+
+function predictMatch(
+  homeTeam,
+  awayTeam
+) {
+  const homeStats =
+    analyzeTeam(homeTeam);
+
+  const awayStats =
+    analyzeTeam(awayTeam);
+
+  /*
+   * Analyse des confrontations directes.
+   */
+  const h2h =
+    analyzeH2H(
+      homeTeam,
+      awayTeam
     );
-  }
-
-
-  const homeStats = analyzeTeam(home);
-  const awayStats = analyzeTeam(away);
-
 
   const dataQuality =
     calculateDataQuality(
@@ -91,13 +118,23 @@ function predictMatch(homeTeam, awayTeam) {
       awayStats.matches
     );
 
-
-  const expectedGoals =
+  /*
+   * Calcul initial des buts attendus.
+   */
+  const baseExpectedGoals =
     calculateExpectedGoals(
       homeStats,
       awayStats
     );
 
+  /*
+   * Ajout de l'influence H2H.
+   */
+  const expectedGoals =
+    applyH2H(
+      baseExpectedGoals,
+      h2h
+    );
 
   const matrix =
     buildPoissonMatrix(
@@ -105,18 +142,17 @@ function predictMatch(homeTeam, awayTeam) {
       expectedGoals.awayXG
     );
 
-
   const markets =
     calculateMarkets(matrix);
 
-
   const topScores =
-    getTopScores(matrix, 3);
-
+    getTopScores(
+      matrix,
+      3
+    );
 
   const winner =
     getWinner(markets);
-
 
   const confidence =
     calculateConfidence(
@@ -126,47 +162,85 @@ function predictMatch(homeTeam, awayTeam) {
       dataQuality
     );
 
-
   let prediction;
 
   if (winner.type === "HOME") {
-    prediction = home;
+    prediction = homeTeam;
   } else if (winner.type === "AWAY") {
-    prediction = away;
+    prediction = awayTeam;
   } else {
     prediction = "DRAW";
   }
 
-
   return {
-
     match: {
-      home,
-      away
+      home: homeTeam,
+      away: awayTeam
     },
-
 
     teams: {
       home: homeStats,
       away: awayStats
     },
 
+    h2h: {
+      matches: h2h.matches,
 
-    expectedGoals: {
-      home: round(
-        expectedGoals.homeXG,
-        3
-      ),
+      homeAvgScored:
+        round(
+          h2h.homeAvgScored,
+          3
+        ),
 
-      away: round(
-        expectedGoals.awayXG,
-        3
-      )
+      homeAvgConceded:
+        round(
+          h2h.homeAvgConceded,
+          3
+        ),
+
+      awayAvgScored:
+        round(
+          h2h.awayAvgScored,
+          3
+        ),
+
+      awayAvgConceded:
+        round(
+          h2h.awayAvgConceded,
+          3
+        ),
+
+      homeWinRate:
+        percentage(
+          h2h.homeWinRate
+        ),
+
+      drawRate:
+        percentage(
+          h2h.drawRate
+        ),
+
+      awayWinRate:
+        percentage(
+          h2h.awayWinRate
+        )
     },
 
+    expectedGoals: {
+      home:
+        round(
+          expectedGoals.homeXG,
+          3
+        ),
+
+      away:
+        round(
+          expectedGoals.awayXG,
+          3
+        )
+    },
 
     predictions: {
-
       winner: prediction,
 
       dataQuality,
@@ -209,20 +283,20 @@ function predictMatch(homeTeam, awayTeam) {
       confidence
     },
 
-
     topScores:
-      topScores.map(score => ({
-        score:
-          `${score.homeGoals}-${score.awayGoals}`,
+      topScores.map(
+        score => ({
+          score:
+            `${score.homeGoals}-${score.awayGoals}`,
 
-        probability:
-          percentage(
-            score.probability
-          )
-      }))
+          probability:
+            percentage(
+              score.probability
+            )
+        })
+      )
   };
 }
-
 
 module.exports = {
   predictMatch
