@@ -40,43 +40,56 @@ Crystal Palace 1-1 Arsenal | 2026-08-15 | 18:30
 </main>
 
 <script>
-async function save(){
- const text=document.getElementById("matches").value.trim();
- const msg=document.getElementById("msg");
+async function save() {
 
- if(!text){
-   msg.textContent="❌ Aucun match à importer.";
-   return;
+  const box = document.getElementById("matches");
+  const msg = document.getElementById("msg");
+  const text = box.value.trim();
+
+  if (!text) {
+    msg.textContent = "❌ Aucun match à importer.";
+    return;
+  }
+
+  msg.textContent = "⏳ Enregistrement...";
+
+  try {
+
+    const response = await fetch("/api/matches", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        text: text
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message || "Erreur d'importation"
+      );
+    }
+
+    msg.textContent =
+      `✅ ${data.added} ajouté(s) | ` +
+      `♻️ ${data.duplicates} doublon(s) | ` +
+      `❌ ${data.invalid} invalide(s)`;
+
+    if (data.added > 0) {
+      box.value = "";
+    }
+
+  } catch (error) {
+
+    console.error(error);
+
+    msg.textContent =
+      "❌ " + error.message;
+  }
  }
-
- msg.textContent="⏳ Enregistrement...";
-
- const lines=text.split("\n").map(x=>x.trim()).filter(Boolean);
-
- try{
-   const response=await fetch("/api/matches",{
-     method:"POST",
-     headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({text:lines})
-   });
-
-   const data=await response.json();
-
-   if(!response.ok || !data.success)
-     throw new Error(data.message||"Erreur d'importation");
-
-   msg.textContent=
-     `✅ ${data.added} ajouté(s) | `+
-     `♻️ ${data.duplicates} doublon(s) | `+
-     `❌ ${data.invalid} invalide(s)`;
-
-   if(data.added>0)
-     document.getElementById("matches").value="";
-
- }catch(e){
-   msg.textContent="❌ "+e.message;
- }
-}
 </script>
 </body>
 </html>
