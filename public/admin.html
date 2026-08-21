@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROI FIFA — Administration</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:#0f172a;
+  color:#f8fafc;
+  font-family:Arial,sans-serif
+}
+main{
+  max-width:700px;
+  margin:auto;
+  padding:25px 15px
+}
+.card{
+  background:#1e293b;
+  padding:20px;
+  border-radius:15px;
+  margin-bottom:15px
+}
+h1{text-align:center;margin-top:0}
+p{color:#94a3b8}
+textarea{
+  width:100%;
+  min-height:280px;
+  resize:vertical;
+  padding:15px;
+  border-radius:10px;
+  border:1px solid #475569;
+  background:#0f172a;
+  color:white;
+  font-size:15px;
+  outline:none
+}
+button{
+  width:100%;
+  margin-top:15px;
+  padding:15px;
+  border:0;
+  border-radius:10px;
+  background:#2563eb;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer
+}
+button:disabled{opacity:.6}
+#message{
+  margin-top:15px;
+  padding:12px;
+  border-radius:10px;
+  display:none;
+  white-space:pre-line
+}
+.ok{background:#14532d}
+.err{background:#7f1d1d}
+.example{
+  background:#0f172a;
+  padding:12px;
+  border-radius:8px;
+  font-family:monospace;
+  white-space:pre-line
+}
+</style>
+</head>
+
+<body>
+
+<main>
+
+  <div class="card">
+    <h1>⚽ ROI PREDICTION FIFA</h1>
+    <p style="text-align:center">
+      Administration des données FIFA Virtual
+    </p>
+  </div>
+
+  <div class="card">
+
+    <h2>📥 Ajouter des matchs</h2>
+
+    <p>
+      Un match par ligne :
+    </p>
+
+    <div class="example">Chelsea 2-1 Leeds United | 21/08/2026 18:30
+Brentford 1-3 Crystal Palace | 21/08/2026 18:50</div>
+
+    <textarea
+      id="matches"
+      placeholder="Colle tes résultats ici..."
+    ></textarea>
+
+    <button id="save">
+      💾 ENREGISTRER LES MATCHS
+    </button>
+
+    <div id="message"></div>
+
+  </div>
+
+</main>
+
+<script>
+const input=document.getElementById("matches");
+const button=document.getElementById("save");
+const message=document.getElementById("message");
+
+function show(text,ok=true){
+  message.textContent=text;
+  message.className=ok?"ok":"err";
+  message.style.display="block";
+}
+
+button.addEventListener("click",async()=>{
+
+  const text=input.value.trim();
+
+  if(!text){
+    show("❌ Aucun match à enregistrer.",false);
+    return;
+  }
+
+  button.disabled=true;
+  button.textContent="⏳ ENREGISTREMENT...";
+
+  try{
+
+    const response=await fetch("/api/admin/import",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({text})
+    });
+
+    const data=await response.json();
+
+    if(!response.ok||!data.success){
+      throw new Error(
+        data.message||"Erreur pendant l'import."
+      );
+    }
+
+    show(
+      `✅ ${data.added} match(s) ajouté(s)\n`+
+      `♻️ ${data.duplicates} doublon(s)\n`+
+      `❌ ${data.invalid} invalide(s)`
+    );
+
+    input.value="";
+
+  }catch(error){
+
+    console.error(error);
+
+    show(
+      "❌ "+error.message,
+      false
+    );
+
+  }finally{
+
+    button.disabled=false;
+    button.textContent="💾 ENREGISTRER LES MATCHS";
+
+  }
+
+});
+</script>
+
+</body>
+</html>
