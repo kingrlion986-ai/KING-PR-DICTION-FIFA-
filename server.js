@@ -114,8 +114,8 @@ app.get("/api/predict", (req, res) => {
 // Brentford 1-3 Crystal Palace | 21/08/2026 18:50
 //
 
-app.post("/api/admin/import", (req, res) => {
-
+const importMatches = (req, res) => {
+  
   try {
 
     const text =
@@ -247,6 +247,9 @@ app.post("/api/admin/import", (req, res) => {
     });
   }
 });
+
+app.post("/api/admin/import", importMatches);
+app.post("/api/matches", importMatches);
 
 
 // ===============================
