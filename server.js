@@ -2,10 +2,7 @@ const express = require("express");
 const path = require("path");
 
 const { predictMatch } = require("./src/predictionEngine");
-const {
-  addMatch,
-  getDataStats
-} = require("./src/dataEngine")
+const { addMatches } = require("./src/dataEngine");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -406,6 +403,60 @@ app.use(
 // ==========================================
 // SERVEUR
 // ==========================================
+
+app.post("/api/matches", (req, res) => {
+  try {
+    const lines = req.body.text;
+
+    if (!Array.isArray(lines)) {
+      return res.status(400).json({
+        success: false,
+        message: "Aucune liste de matchs reçue."
+      });
+    }
+
+    const matches = [];
+
+    for (const line of lines) {
+      const parts = line.split("|").map(x => x.trim());
+
+      if (parts.length < 3) continue;
+
+      const result = parts[0].match(
+        /^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/
+      );
+
+      if (!result) continue;
+
+      const [, home, homeGoals, awayGoals, away] = result;
+
+      matches.push({
+        home: home.trim(),
+        away: away.trim(),
+        homeGoals: Number(homeGoals),
+        awayGoals: Number(awayGoals),
+        date: `${parts[1]}T${parts[2]}:00`,
+        competition: "FIFA FC 26. England Championship",
+        source: "FIFA_VIRTUAL"
+      });
+    }
+
+    const result = addMatches(matches);
+
+    res.json({
+      success: true,
+      ...result
+    });
+
+  } catch (error) {
+    console.error("Import error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
 
 app.listen(
   PORT,
