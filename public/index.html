@@ -8,503 +8,245 @@
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;
- background:#0f172a;
- color:#f8fafc;
- font-family:Arial,sans-serif
+ margin:0;font-family:Arial,sans-serif;color:#fff;
+ background:radial-gradient(circle at top,#173b70 0,#07101f 45%,#030712 100%);
+ min-height:100vh
 }
-main{
- max-width:850px;
- margin:auto;
- padding:20px
-}
-h1{text-align:center;margin:5px 0}
-.sub{text-align:center;color:#94a3b8;margin-bottom:20px}
+.container{max-width:900px;margin:auto;padding:25px 15px 50px}
+.header{text-align:center;margin-bottom:22px}
+.logo{font-size:38px;font-weight:900}
+.logo span{color:#19e6ff}
+.subtitle{color:#9fb3cc;margin-top:6px}
 .card{
- background:#1e293b;
- padding:18px;
- border-radius:14px;
- margin-bottom:15px
+ background:rgba(15,27,48,.9);border:1px solid #23476d;
+ border-radius:18px;padding:20px;margin:14px 0;
+ box-shadow:0 8px 30px #0005
 }
-.inputs{
- display:grid;
- grid-template-columns:1fr 1fr;
- gap:12px
-}
-label{
- display:block;
- margin-bottom:6px;
- font-weight:bold
-}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{display:block;font-weight:bold;color:#8edfff;margin-bottom:7px}
 input{
- width:100%;
- padding:13px;
- border:1px solid #475569;
- border-radius:9px;
- background:#020617;
- color:white;
- font-size:16px
+ width:100%;padding:14px;border-radius:11px;border:1px solid #315477;
+ background:#071321;color:#fff;font-size:16px;outline:none
 }
+input:focus{border-color:#19e6ff;box-shadow:0 0 12px #19e6ff44}
 button{
- width:100%;
- padding:14px;
- margin-top:14px;
- border:0;
- border-radius:9px;
- background:#2563eb;
- color:white;
- font-size:16px;
- font-weight:bold
+ width:100%;margin-top:15px;padding:15px;border:0;border-radius:11px;
+ background:linear-gradient(90deg,#087cff,#00d9ff);
+ color:white;font-size:17px;font-weight:900;cursor:pointer
 }
-button:disabled{opacity:.6}
+button:disabled{opacity:.5}
 .hidden{display:none}
-.error{
- background:#7f1d1d;
- padding:12px;
- border-radius:8px
+.error{background:#641d2d;color:#ffd5dc;padding:13px;border-radius:10px}
+.match{text-align:center}
+.match h2{margin:0;font-size:25px}
+.tag{color:#19e6ff;font-size:12px;font-weight:bold;margin-bottom:7px}
+.winner{text-align:center}
+.winner small{color:#91a7c0}
+.winner strong{display:block;font-size:31px;color:#19e6ff;margin:7px}
+.conf{font-weight:bold}
+.title{font-size:19px;font-weight:bold;margin-bottom:14px}
+.grid3,.grid4{display:grid;gap:10px}
+.grid3{grid-template-columns:repeat(3,1fr)}
+.grid4{grid-template-columns:repeat(4,1fr)}
+.box{
+ background:#071321;border:1px solid #1d3957;border-radius:12px;
+ padding:14px;text-align:center
 }
-.result{
- text-align:center
-}
-.big{
- font-size:27px;
- font-weight:bold
-}
-.grid{
- display:grid;
- grid-template-columns:repeat(2,1fr);
- gap:10px
-}
-.stat{
- background:#020617;
- padding:13px;
- border-radius:9px
-}
-.stat small{
- display:block;
- color:#94a3b8;
- margin-bottom:5px
-}
-.teams{
- display:grid;
- grid-template-columns:1fr 1fr;
- gap:12px
-}
-.team{
- background:#020617;
- padding:15px;
- border-radius:10px
-}
-.team h3{margin-top:0}
-.row{
- display:flex;
- justify-content:space-between;
- padding:7px 0;
- border-bottom:1px solid #1e293b
-}
-.scores{
- display:flex;
- gap:10px
-}
-.score{
- flex:1;
- text-align:center;
- background:#020617;
- padding:15px;
- border-radius:9px
-}
-.score b{
- display:block;
- font-size:23px
-}
-.muted{color:#94a3b8}
-
+.box small{display:block;color:#8fa5bd;margin-bottom:6px}
+.box b{font-size:21px}
+.score b{font-size:25px;color:#fff}
+.score span{display:block;color:#19e6ff;margin-top:5px}
+.versus{text-align:center;font-size:22px;font-weight:bold;color:#19e6ff}
+.teamstats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.team h3{text-align:center;color:#19e6ff}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #183049}
+.row:last-child{border:0}
+.loading{text-align:center;color:#9fb3cc;padding:15px}
 @media(max-width:650px){
- .inputs,.teams,.grid{
-  grid-template-columns:1fr
- }
- .scores{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr
- }
+ .teams,.teamstats{grid-template-columns:1fr}
+ .grid3{grid-template-columns:1fr}
+ .grid4{grid-template-columns:1fr 1fr}
+ .logo{font-size:29px}
 }
 </style>
 </head>
 
 <body>
+<main class="container">
 
-<main>
-
-<h1>⚽ ROI PREDICTION FIFA</h1>
-<div class="sub">FIFA FC 26 — Analyse statistique</div>
+<header class="header">
+ <div class="logo">⚽ <span>ROI PREDICTION</span> FIFA</div>
+ <div class="subtitle">FIFA FC 26 • Virtual AI Prediction</div>
+</header>
 
 <section class="card">
-
-<div class="inputs">
-
-<div>
-<label>Domicile</label>
-<input
- id="home"
- placeholder="Ex : Newcastle United"
- autocomplete="off">
-</div>
-
-<div>
-<label>Extérieur</label>
-<input
- id="away"
- placeholder="Ex : Burnley"
- autocomplete="off">
-</div>
-
-</div>
-
-<button id="btn">
-🔎 ANALYSER LE MATCH
-</button>
-
+ <div class="teams">
+  <div>
+   <label>ÉQUIPE DOMICILE</label>
+   <input id="home" placeholder="Ex : Chelsea" autocomplete="off">
+  </div>
+  <div>
+   <label>ÉQUIPE EXTÉRIEUR</label>
+   <input id="away" placeholder="Ex : Leeds United" autocomplete="off">
+  </div>
+ </div>
+ <button id="btn">🔮 LANCER LA PRÉDICTION</button>
 </section>
 
 <div id="error" class="error hidden"></div>
-
-<div id="loading" class="card hidden">
-⏳ Analyse des données FIFA FC 26...
-</div>
+<div id="loading" class="card loading hidden">⚡ Analyse des données FIFA FC 26...</div>
 
 <div id="results" class="hidden">
 
-<section class="card result">
+<section class="card match">
+ <div class="tag">MATCH ANALYSÉ</div>
+ <h2 id="match"></h2>
+</section>
 
-<div class="muted">MATCH</div>
-<div id="match" class="big"></div>
-
-<br>
-
-<div class="muted">Analyse statistique</div>
-<div id="result" class="big"></div>
-
+<section class="card winner">
+ <small>VAINQUEUR PROBABLE</small>
+ <strong id="winner"></strong>
+ Confiance : <span id="confidence" class="conf"></span>
 </section>
 
 <section class="card">
-
-<h2>📊 Analyse</h2>
-
-<div class="grid">
-
-<div class="stat">
-<small>Domicile</small>
-<b id="homeProb">-</b>
-</div>
-
-<div class="stat">
-<small>Nul</small>
-<b id="drawProb">-</b>
-</div>
-
-<div class="stat">
-<small>Extérieur</small>
-<b id="awayProb">-</b>
-</div>
-
-<div class="stat">
-<small>Qualité des données</small>
-<b id="quality">-</b>
-</div>
-
-</div>
-
+ <div class="title">📊 Probabilités</div>
+ <div class="grid3">
+  <div class="box"><small>DOMICILE</small><b id="homeWin">-</b></div>
+  <div class="box"><small>NUL</small><b id="draw">-</b></div>
+  <div class="box"><small>EXTÉRIEUR</small><b id="awayWin">-</b></div>
+ </div>
 </section>
 
 <section class="card">
-
-<h2>⚽ Buts attendus</h2>
-
-<div class="grid">
-
-<div class="stat">
-<small id="homeXGName">Domicile</small>
-<b id="homeXG">-</b>
-</div>
-
-<div class="stat">
-<small id="awayXGName">Extérieur</small>
-<b id="awayXG">-</b>
-</div>
-
-</div>
-
+ <div class="title">⚽ Buts attendus</div>
+ <div class="grid3">
+  <div class="box"><small id="homeLabel">DOMICILE</small><b id="xgh">-</b></div>
+  <div class="versus">VS</div>
+  <div class="box"><small id="awayLabel">EXTÉRIEUR</small><b id="xga">-</b></div>
+ </div>
 </section>
 
 <section class="card">
-
-<h2>🎯 Scores statistiques</h2>
-
-<div id="scores" class="scores"></div>
-
+ <div class="title">📈 Marchés</div>
+ <div class="grid4">
+  <div class="box"><small>OVER 2.5</small><b id="over">-</b></div>
+  <div class="box"><small>UNDER 2.5</small><b id="under">-</b></div>
+  <div class="box"><small>BTTS OUI</small><b id="btts">-</b></div>
+  <div class="box"><small>BTTS NON</small><b id="noBtts">-</b></div>
+ </div>
 </section>
 
 <section class="card">
-
-<h2>⚔️ H2H</h2>
-
-<div class="grid">
-
-<div class="stat">
-<small>Matchs</small>
-<b id="h2hMatches">-</b>
-</div>
-
-<div class="stat">
-<small>Victoire domicile</small>
-<b id="h2hHome">-</b>
-</div>
-
-<div class="stat">
-<small>Nuls</small>
-<b id="h2hDraw">-</b>
-</div>
-
-<div class="stat">
-<small>Victoire extérieur</small>
-<b id="h2hAway">-</b>
-</div>
-
-</div>
-
+ <div class="title">🎯 Scores les plus probables</div>
+ <div id="scores" class="grid3"></div>
 </section>
 
 <section class="card">
+ <div class="title">⚔️ Confrontations directes</div>
+ <div class="grid4">
+  <div class="box"><small>MATCHS</small><b id="h2h">0</b></div>
+  <div class="box"><small>DOMICILE</small><b id="h2hh">0%</b></div>
+  <div class="box"><small>NUL</small><b id="h2hd">0%</b></div>
+  <div class="box"><small>EXTÉRIEUR</small><b id="h2ha">0%</b></div>
+ </div>
+</section>
 
-<h2>📚 Forme des équipes</h2>
+<section class="card">
+ <div class="title">📚 Statistiques</div>
+ <div class="teamstats">
+  <div class="box team">
+   <h3 id="hn">Domicile</h3>
+   <div class="row">Matchs <b id="hm"></b></div>
+   <div class="row">Buts marqués <b id="hs"></b></div>
+   <div class="row">Buts encaissés <b id="hc"></b></div>
+   <div class="row">Victoire <b id="hw"></b></div>
+   <div class="row">Forme <b id="hf"></b></div>
+  </div>
+  <div class="box team">
+   <h3 id="an">Extérieur</h3>
+   <div class="row">Matchs <b id="am"></b></div>
+   <div class="row">Buts marqués <b id="as"></b></div>
+   <div class="row">Buts encaissés <b id="ac"></b></div>
+   <div class="row">Victoire <b id="aw"></b></div>
+   <div class="row">Forme <b id="af"></b></div>
+  </div>
+ </div>
+</section>
 
-<div class="teams">
-
-<div class="team">
-
-<h3 id="homeName">Domicile</h3>
-
-<div class="row">
-<span>Matchs</span>
-<b id="hm">-</b>
-</div>
-
-<div class="row">
-<span>Buts marqués</span>
-<b id="hs">-</b>
-</div>
-
-<div class="row">
-<span>Buts encaissés</span>
-<b id="hc">-</b>
-</div>
-
-<div class="row">
-<span>Victoire</span>
-<b id="hw">-</b>
-</div>
-
-<div class="row">
-<span>Forme</span>
-<b id="hf">-</b>
-</div>
-
-</div>
-
-<div class="team">
-
-<h3 id="awayName">Extérieur</h3>
-
-<div class="row">
-<span>Matchs</span>
-<b id="am">-</b>
-</div>
-
-<div class="row">
-<span>Buts marqués</span>
-<b id="as">-</b>
-</div>
-
-<div class="row">
-<span>Buts encaissés</span>
-<b id="ac">-</b>
-</div>
-
-<div class="row">
-<span>Victoire</span>
-<b id="aw">-</b>
-</div>
-
-<div class="row">
-<span>Forme</span>
-<b id="af">-</b>
-</div>
-
-</div>
-
-</div>
-
+<section class="card">
+ <div class="title">🧠 Qualité des données</div>
+ <div class="box"><b id="quality">-</b></div>
 </section>
 
 </div>
-
 </main>
 
 <script>
 const $=id=>document.getElementById(id);
+const n=v=>v==null?"-":Number(v).toFixed(2);
+const p=v=>v==null?"-":Number(v).toFixed(1)+"%";
 
-function num(v,d=2){
- return v==null?"-":Number(v).toFixed(d);
-}
-
-function pct(v){
- return v==null?"-":Number(v).toFixed(1)+"%";
-}
-
-async function analyze(){
-
- const home=$("home").value.trim();
- const away=$("away").value.trim();
-
+async function predict(){
+ const home=$("home").value.trim(),away=$("away").value.trim();
  $("error").classList.add("hidden");
-
- if(!home||!away){
-  $("error").textContent=
-   "Entrez les deux équipes.";
-  $("error").classList.remove("hidden");
-  return;
- }
-
- if(home.toLowerCase()===away.toLowerCase()){
-  $("error").textContent=
-   "Les deux équipes doivent être différentes.";
-  $("error").classList.remove("hidden");
-  return;
- }
-
- $("btn").disabled=true;
- $("loading").classList.remove("hidden");
- $("results").classList.add("hidden");
+ if(!home||!away){$("error").textContent="❌ Entrez les deux équipes.";return $("error").classList.remove("hidden")}
+ if(home.toLowerCase()==away.toLowerCase()){ $("error").textContent="❌ Les équipes doivent être différentes.";return $("error").classList.remove("hidden")}
+ $("btn").disabled=true;$("loading").classList.remove("hidden");$("results").classList.add("hidden");
 
  try{
-
-  const response=await fetch(
-   "/api/predict?home="+
-   encodeURIComponent(home)+
-   "&away="+
-   encodeURIComponent(away)
-  );
-
-  const data=await response.json();
-
-  if(!response.ok||!data.success){
-   throw new Error(
-    data.message||"Analyse impossible."
-   );
-  }
-
-  show(data.prediction);
-
+  const r=await fetch(`/api/predict?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
+  const d=await r.json();
+  if(!r.ok||!d.success)throw Error(d.message||"Erreur de prédiction");
+  show(d.prediction);
  }catch(e){
-
   $("error").textContent="❌ "+e.message;
   $("error").classList.remove("hidden");
-
  }finally{
-
-  $("btn").disabled=false;
-  $("loading").classList.add("hidden");
+  $("btn").disabled=false;$("loading").classList.add("hidden");
  }
 }
 
-function show(p){
-
- const h=p.match.home;
- const a=p.match.away;
- const hs=p.teams.home;
- const as=p.teams.away;
-
- $("match").textContent=h+" vs "+a;
- $("result").textContent=p.analysis.result;
-
- $("homeProb").textContent=
-  pct(p.analysis.homeWin);
-
- $("drawProb").textContent=
-  pct(p.analysis.draw);
-
- $("awayProb").textContent=
-  pct(p.analysis.awayWin);
-
- $("quality").textContent=
-  p.analysis.dataQuality+"%";
-
- $("homeXGName").textContent=h;
- $("awayXGName").textContent=a;
-
- $("homeXG").textContent=
-  num(p.expectedGoals.home);
-
- $("awayXG").textContent=
-  num(p.expectedGoals.away);
-
- $("homeName").textContent=h;
- $("awayName").textContent=a;
-
- $("hm").textContent=hs.matches;
- $("hs").textContent=num(hs.avgScored);
- $("hc").textContent=num(hs.avgConceded);
- $("hw").textContent=pct(hs.winRate*100);
- $("hf").textContent=num(hs.form);
-
- $("am").textContent=as.matches;
- $("as").textContent=num(as.avgScored);
- $("ac").textContent=num(as.avgConceded);
- $("aw").textContent=pct(as.winRate*100);
- $("af").textContent=num(as.form);
-
- $("h2hMatches").textContent=
-  p.h2h.matches;
-
- $("h2hHome").textContent=
-  pct(p.h2h.homeWinRate);
-
- $("h2hDraw").textContent=
-  pct(p.h2h.drawRate);
-
- $("h2hAway").textContent=
-  pct(p.h2h.awayWinRate);
-
- const scores=$("scores");
- scores.innerHTML="";
-
- p.topScores.forEach(s=>{
-
-  const div=document.createElement("div");
-  div.className="score";
-
-  div.innerHTML=
-   "<b>"+s.score+"</b>"+
-   "<span class='muted'>"+
-   s.probability+"%"+
-   "</span>";
-
-  scores.appendChild(div);
- });
-
+function show(x){
+ const h=x.teams.home,a=x.teams.away,m=x.match,q=x.predictions;
  $("results").classList.remove("hidden");
+ $("match").textContent=`${m.home}  VS  ${m.away}`;
+ $("winner").textContent=q.winner;
+ $("confidence").textContent=q.confidence+"%";
+ $("homeWin").textContent=p(q.homeWin);
+ $("draw").textContent=p(q.draw);
+ $("awayWin").textContent=p(q.awayWin);
+ $("homeLabel").textContent=m.home;
+ $("awayLabel").textContent=m.away;
+ $("xgh").textContent=n(x.expectedGoals.home);
+ $("xga").textContent=n(x.expectedGoals.away);
+ $("over").textContent=p(q.over25);
+ $("under").textContent=p(q.under25);
+ $("btts").textContent=p(q.bttsYes);
+ $("noBtts").textContent=p(q.bttsNo);
+ $("hn").textContent=m.home;$("an").textContent=m.away;
+ $("hm").textContent=h.matches;$("hs").textContent=n(h.avgScored);
+ $("hc").textContent=n(h.avgConceded);$("hw").textContent=p(h.winRate*100);
+ $("hf").textContent=n(h.form);
+ $("am").textContent=a.matches;$("as").textContent=n(a.avgScored);
+ $("ac").textContent=n(a.avgConceded);$("aw").textContent=p(a.winRate*100);
+ $("af").textContent=n(a.form);
+ $("quality").textContent=(q.dataQuality??0)+"%";
+
+ const z=x.h2h||{};
+ $("h2h").textContent=z.matches||0;
+ $("h2hh").textContent=p(z.homeWinRate||0);
+ $("h2hd").textContent=p(z.drawRate||0);
+ $("h2ha").textContent=p(z.awayWinRate||0);
+
+ $("scores").innerHTML=(x.topScores||[]).map(s=>
+  `<div class="box score"><b>${s.score}</b><span>${p(s.probability)}</span></div>`
+ ).join("");
 }
 
-$("btn").addEventListener("click",analyze);
-
-$("home").addEventListener("keydown",e=>{
- if(e.key==="Enter") analyze();
-});
-
-$("away").addEventListener("keydown",e=>{
- if(e.key==="Enter") analyze();
-});
+$("btn").onclick=predict;
+$("home").onkeydown=e=>{if(e.key==="Enter")predict()};
+$("away").onkeydown=e=>{if(e.key==="Enter")predict()};
 </script>
-
 </body>
 </html>
