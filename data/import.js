@@ -1,84 +1,40 @@
-const fs = require("fs");
-const path = require("path");
+const { addMatches } = require("./src/dataEngine");
 
-const { addMatches } = require("./dataEngine");
+const matches = [
+  {
+    date: "2026-08-21T10:30:00",
+    home: "Brentford",
+    away: "Crystal Palace",
+    homeGoals: 2,
+    awayGoals: 1,
+    competition: "FIFA FC 26. England Championship",
+    source: "FIFA_VIRTUAL"
+  },
 
-const IMPORT_FILE = path.join(
-  __dirname,
-  "data",
-  "import.json"
-);
-
-function main() {
-  if (!fs.existsSync(IMPORT_FILE)) {
-    console.error(
-      "❌ Fichier data/import.json introuvable."
-    );
-    process.exit(1);
+  {
+    date: "2026-08-21T09:50:00",
+    home: "Chelsea",
+    away: "Leeds United",
+    homeGoals: 1,
+    awayGoals: 2,
+    competition: "FIFA FC 26. England Championship",
+    source: "FIFA_VIRTUAL"
   }
 
-  let matches;
+  // Ajoute ici les nouveaux matchs
+];
 
-  try {
-    matches = JSON.parse(
-      fs.readFileSync(
-        IMPORT_FILE,
-        "utf8"
-      )
-    );
-  } catch (error) {
-    console.error(
-      "❌ import.json contient un JSON invalide."
-    );
-
-    console.error(error.message);
-    process.exit(1);
-  }
-
-  if (!Array.isArray(matches)) {
-    console.error(
-      "❌ import.json doit contenir un tableau de matchs."
-    );
-    process.exit(1);
-  }
-
+try {
   const result = addMatches(matches);
 
-  console.log(
-    "================================"
-  );
-
-  console.log(
-    "⚽ ROI PREDICTION FIFA"
-  );
-
-  console.log(
-    "📥 IMPORT TERMINÉ"
-  );
-
-  console.log(
-    "================================"
-  );
-
-  console.log(
-    `✅ Ajoutés     : ${result.added}`
-  );
-
-  console.log(
-    `♻️ Doublons    : ${result.duplicates}`
-  );
-
-  console.log(
-    `❌ Invalides   : ${result.invalid}`
-  );
-
-  console.log(
-    `📊 Total traité: ${result.total}`
-  );
-
-  console.log(
-    "================================"
-  );
+  console.log("================================");
+  console.log("   IMPORT FIFA VIRTUAL");
+  console.log("================================");
+  console.log(`Total     : ${result.total}`);
+  console.log(`Ajoutés   : ${result.added}`);
+  console.log(`Doublons  : ${result.duplicates}`);
+  console.log(`Invalides : ${result.invalid}`);
+  console.log("================================");
+} catch (error) {
+  console.error("Erreur :", error.message);
 }
-
-main();
