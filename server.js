@@ -1,7 +1,7 @@
 const express = require("express");
 const path = require("path");
 
-const { predictMatch } = require("./predictionEngine");
+const { predictMatch } = require("./src/predictionEngine");
 const {
   addMatch,
   getDataStats
