@@ -1,49 +1,70 @@
-const { addMatches } = require("./src/dataEngine");
+const { addMatch } = require("./src/dataEngine");
+const readline = require("readline");
 
-// =====================================================
-// AJOUTE TES NOUVEAUX MATCHS ICI
-// =====================================================
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
-const matches = [
-  {
-    date: "2026-08-15T20:10:00",
-    home: "Chelsea",
-    away: "Leeds United",
-    homeGoals: 2,
-    awayGoals: 1,
-    competition: "FIFA FC 26. England Championship",
-    source: "FIFA_VIRTUAL"
-  },
+console.log("\n⚽ IMPORT FIFA VIRTUAL");
+console.log("Colle tes résultats, un par ligne.");
+console.log("Format : Chelsea 2-1 Leeds United");
+console.log("Tape FIN pour terminer.\n");
 
-  // Ajoute les prochains matchs ici :
-  //
-  // {
-  //   date: "2026-08-15T21:30:00",
-  //   home: "Brentford",
-  //   away: "Crystal Palace",
-  //   homeGoals: 1,
-  //   awayGoals: 2,
-  //   competition: "FIFA FC 26. England Championship",
-  //   source: "FIFA_VIRTUAL"
-  // }
-];
+const lines = [];
 
-// =====================================================
-// IMPORT AUTOMATIQUE
-// =====================================================
+rl.on("line", line => {
+  line = line.trim();
 
-try {
-  const result = addMatches(matches);
+  if (!line) return;
 
-  console.log("\n=================================");
-  console.log("⚽ ROI PREDICTION FIFA");
-  console.log("=================================");
-  console.log(`✅ Ajoutés      : ${result.added}`);
-  console.log(`♻️ Doublons     : ${result.duplicates}`);
-  console.log(`❌ Invalides    : ${result.invalid}`);
-  console.log(`📊 Total traité : ${result.total}`);
-  console.log("=================================\n");
+  if (line.toUpperCase() === "FIN") {
+    importer();
+    rl.close();
+    return;
+  }
 
-} catch (error) {
-  console.error("❌ Erreur :", error.message);
+  lines.push(line);
+});
+
+function importer() {
+  let added = 0;
+  let invalid = 0;
+
+  for (const line of lines) {
+    const match = line.match(/^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/);
+
+    if (!match) {
+      console.log(`❌ Format incorrect : ${line}`);
+      invalid++;
+      continue;
+    }
+
+    const [, home, homeGoals, awayGoals, away] = match;
+
+    try {
+      const result = addMatch({
+        home,
+        away,
+        homeGoals: Number(homeGoals),
+        awayGoals: Number(awayGoals),
+        competition: "FIFA FC 26. England Championship",
+        source: "FIFA_VIRTUAL"
+      });
+
+      if (result.duplicate) {
+        console.log(`⚠️ Déjà présent : ${line}`);
+      } else {
+        console.log(`✅ Ajouté : ${line}`);
+        added++;
+      }
+    } catch (error) {
+      console.log(`❌ Erreur : ${line}`);
+      invalid++;
+    }
+  }
+
+  console.log("\n📊 IMPORT TERMINÉ");
+  console.log(`✅ Ajoutés : ${added}`);
+  console.log(`❌ Invalides : ${invalid}`);
 }
