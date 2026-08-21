@@ -2,14 +2,14 @@ const express = require("express");
 const path = require("path");
 
 const { predictMatch } = require("./src/predictionEngine");
-const { addMatches } = require("./src/dataEngine");
+
+const {
+  addMatch,
+  getDataStats
+} = require("./src/dataEngine");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// ==========================================
-// MIDDLEWARE
-// ==========================================
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -18,9 +18,10 @@ app.use(express.static(
   path.join(__dirname, "public")
 ));
 
-// ==========================================
-// PAGE PRINCIPALE
-// ==========================================
+
+// ===============================
+// PAGES
+// ===============================
 
 app.get("/", (req, res) => {
   res.sendFile(
@@ -28,19 +29,16 @@ app.get("/", (req, res) => {
   );
 });
 
-// ==========================================
-// PAGE ADMIN
-// ==========================================
-
 app.get("/admin", (req, res) => {
   res.sendFile(
     path.join(__dirname, "public", "admin.html")
   );
 });
 
-// ==========================================
+
+// ===============================
 // STATUS
-// ==========================================
+// ===============================
 
 app.get("/api/status", (req, res) => {
   res.json({
@@ -52,25 +50,24 @@ app.get("/api/status", (req, res) => {
   });
 });
 
-// ==========================================
+
+// ===============================
 // PRÉDICTION
-// ==========================================
+// ===============================
 
 app.get("/api/predict", (req, res) => {
   try {
-    const home = String(
-      req.query.home || ""
-    ).trim();
 
-    const away = String(
-      req.query.away || ""
-    ).trim();
+    const home =
+      String(req.query.home || "").trim();
+
+    const away =
+      String(req.query.away || "").trim();
 
     if (!home || !away) {
       return res.status(400).json({
         success: false,
-        message:
-          "Les deux équipes sont obligatoires."
+        message: "Les deux équipes sont obligatoires."
       });
     }
 
@@ -80,15 +77,14 @@ app.get("/api/predict", (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Les deux équipes doivent être différentes."
+        message: "Les deux équipes doivent être différentes."
       });
     }
 
     const prediction =
       predictMatch(home, away);
 
-    return res.json({
+    res.json({
       success: true,
       prediction
     });
@@ -96,230 +92,192 @@ app.get("/api/predict", (req, res) => {
   } catch (error) {
 
     console.error(
-      "Erreur prédiction :",
+      "Erreur prédiction:",
       error
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message:
-        "Erreur interne pendant la prédiction."
+      message: error.message
     });
   }
 });
 
-// ==========================================
+
+// ===============================
 // IMPORT ADMIN
+// ===============================
 //
-// Format accepté :
+// Format :
 //
 // Chelsea 2-1 Leeds United | 21/08/2026 18:30
 // Brentford 1-3 Crystal Palace | 21/08/2026 18:50
 //
-// ==========================================
 
-app.post(
-  "/api/admin/import",
-  (req, res) => {
+app.post("/api/admin/import", (req, res) => {
 
-    try {
+  try {
 
-      const text =
-        typeof req.body.text === "string"
-          ? req.body.text.trim()
+    const text =
+      typeof req.body.text === "string"
+        ? req.body.text.trim()
+        : "";
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        message: "Aucun match fourni."
+      });
+    }
+
+    const lines =
+      text
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    let added = 0;
+    let duplicates = 0;
+    let invalid = 0;
+
+    for (const line of lines) {
+
+      const parts =
+        line.split("|");
+
+      const matchPart =
+        parts[0].trim();
+
+      const datePart =
+        parts[1]
+          ? parts[1].trim()
           : "";
 
-      if (!text) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Aucun match fourni."
-        });
+      const match =
+        matchPart.match(
+          /^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/
+        );
+
+      if (!match) {
+        invalid++;
+        continue;
       }
 
-      const lines =
-        text
-          .split(/\r?\n/)
-          .map(line => line.trim())
-          .filter(Boolean);
+      const home =
+        match[1].trim();
 
-      let added = 0;
-      let duplicates = 0;
-      let invalid = 0;
+      const homeGoals =
+        Number(match[2]);
 
-      for (const line of lines) {
+      const awayGoals =
+        Number(match[3]);
 
-        /*
-         * Sépare :
-         *
-         * Chelsea 2-1 Leeds United
-         *
-         * et :
-         *
-         * 21/08/2026 18:30
-         */
+      const away =
+        match[4].trim();
 
-        const parts =
-          line.split("|");
+      let date;
 
-        const matchPart =
-          parts[0].trim();
+      if (datePart) {
 
-        const datePart =
-          parts[1]
-            ? parts[1].trim()
-            : "";
+        date =
+          parseFrenchDate(datePart);
 
-        /*
-         * Reconnaît :
-         *
-         * Équipe 2-1 Équipe
-         */
-
-        const match =
-          matchPart.match(
-            /^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/
-          );
-
-        if (!match) {
+        if (!date) {
           invalid++;
           continue;
         }
 
-        const home =
-          match[1].trim();
+      } else {
 
-        const homeGoals =
-          Number(match[2]);
-
-        const awayGoals =
-          Number(match[3]);
-
-        const away =
-          match[4].trim();
-
-        /*
-         * Date / heure
-         */
-
-        let date;
-
-        if (datePart) {
-
-          const parsed =
-            parseFrenchDate(datePart);
-
-          if (!parsed) {
-            invalid++;
-            continue;
-          }
-
-          date = parsed;
-
-        } else {
-
-          date =
-            new Date().toISOString();
-        }
-
-        try {
-
-          const result =
-            addMatch({
-              date,
-              home,
-              away,
-              homeGoals,
-              awayGoals,
-              competition:
-                "FIFA FC 26. England Championship",
-              source:
-                "FIFA_VIRTUAL"
-            });
-
-          if (result.duplicate) {
-            duplicates++;
-          } else {
-            added++;
-          }
-
-        } catch (error) {
-
-          console.error(
-            "Match invalide :",
-            line,
-            error.message
-          );
-
-          invalid++;
-        }
+        date =
+          new Date().toISOString();
       }
 
-      return res.json({
-        success: true,
-        added,
-        duplicates,
-        invalid,
-        total: lines.length
-      });
+      try {
 
-    } catch (error) {
+        const result =
+          addMatch({
+            date,
+            home,
+            away,
+            homeGoals,
+            awayGoals,
+            competition:
+              "FIFA FC 26. England Championship",
+            source:
+              "FIFA_VIRTUAL"
+          });
 
-      console.error(
-        "Erreur import :",
-        error
-      );
+        if (result.duplicate) {
+          duplicates++;
+        } else {
+          added++;
+        }
 
-      return res.status(500).json({
-        success: false,
-        message:
-          "Erreur interne pendant l'import."
-      });
+      } catch (error) {
+
+        console.error(
+          "Match invalide:",
+          line,
+          error.message
+        );
+
+        invalid++;
+      }
     }
+
+    res.json({
+      success: true,
+      added,
+      duplicates,
+      invalid,
+      total: lines.length
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Erreur import:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
-);
+});
 
-// ==========================================
-// STATISTIQUES DES DONNÉES
-// ==========================================
 
-app.get(
-  "/api/data/stats",
-  (req, res) => {
+// ===============================
+// STATISTIQUES
+// ===============================
 
-    try {
+app.get("/api/data/stats", (req, res) => {
 
-      const stats =
-        getDataStats();
+  try {
 
-      res.json({
-        success: true,
-        stats
-      });
+    const stats =
+      getDataStats();
 
-    } catch (error) {
+    res.json({
+      success: true,
+      stats
+    });
 
-      console.error(
-        "Erreur statistiques :",
-        error
-      );
+  } catch (error) {
 
-      res.status(500).json({
-        success: false,
-        message:
-          "Impossible de récupérer les statistiques."
-      });
-    }
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
-);
+});
 
-// ==========================================
-// CONVERSION DATE FRANÇAISE
-//
-// 21/08/2026 18:30
-// ↓
-// 2026-08-21T18:30:00
-// ==========================================
+
+// ===============================
+// DATE
+// ===============================
 
 function parseFrenchDate(value) {
 
@@ -385,78 +343,24 @@ function parseFrenchDate(value) {
   return date.toISOString();
 }
 
-// ==========================================
-// ERREUR 404 API
-// ==========================================
 
-app.use(
-  "/api",
-  (req, res) => {
-    res.status(404).json({
-      success: false,
-      message:
-        "Route API introuvable."
-    });
-  }
-);
+// ===============================
+// 404 API
+// ===============================
 
-// ==========================================
-// SERVEUR
-// ==========================================
+app.use("/api", (req, res) => {
 
-app.post("/api/matches", (req, res) => {
-  try {
-    const lines = req.body.text;
+  res.status(404).json({
+    success: false,
+    message: "Route API introuvable."
+  });
 
-    if (!Array.isArray(lines)) {
-      return res.status(400).json({
-        success: false,
-        message: "Aucune liste de matchs reçue."
-      });
-    }
-
-    const matches = [];
-
-    for (const line of lines) {
-      const parts = line.split("|").map(x => x.trim());
-
-      if (parts.length < 3) continue;
-
-      const result = parts[0].match(
-        /^(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)$/
-      );
-
-      if (!result) continue;
-
-      const [, home, homeGoals, awayGoals, away] = result;
-
-      matches.push({
-        home: home.trim(),
-        away: away.trim(),
-        homeGoals: Number(homeGoals),
-        awayGoals: Number(awayGoals),
-        date: `${parts[1]}T${parts[2]}:00`,
-        competition: "FIFA FC 26. England Championship",
-        source: "FIFA_VIRTUAL"
-      });
-    }
-
-    const result = addMatches(matches);
-
-    res.json({
-      success: true,
-      ...result
-    });
-
-  } catch (error) {
-    console.error("Import error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
 });
+
+
+// ===============================
+// SERVEUR
+// ===============================
 
 app.listen(
   PORT,
