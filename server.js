@@ -5,7 +5,7 @@ const { predictMatch } = require("./predictionEngine");
 const {
   addMatch,
   getDataStats
-} = require("./dataEngine");
+} = require("./src/dataEngine")
 
 const app = express();
 const PORT = process.env.PORT || 3000;
