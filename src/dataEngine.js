@@ -260,41 +260,34 @@ function getMatches() {
 /**
  * Retourne les matchs d'une équipe.
  */
+
 function getTeamMatches(teamName) {
-  const team = normalizeTeamName(teamName);
+  const team = normalizeTeamName(teamName).toLowerCase();
 
-  if (!team) {
-    return [];
-  }
+  if (!team) return [];
 
-  return getMatches().filter(
-    match =>
-      match.home === team ||
-      match.away === team
+  return getMatches().filter(match =>
+    normalizeTeamName(match.home).toLowerCase() === team ||
+    normalizeTeamName(match.away).toLowerCase() === team
   );
 }
 
 /**
  * Retourne les confrontations directes.
  */
-function getHeadToHead(
-  homeTeam,
-  awayTeam
-) {
-  const home = normalizeTeamName(homeTeam);
-  const away = normalizeTeamName(awayTeam);
+function getHeadToHead(homeTeam, awayTeam) {
+  const home = normalizeTeamName(homeTeam).toLowerCase();
+  const away = normalizeTeamName(awayTeam).toLowerCase();
 
-  return getMatches().filter(
-    match =>
-      (
-        match.home === home &&
-        match.away === away
-      ) ||
-      (
-        match.home === away &&
-        match.away === home
-      )
-  );
+  return getMatches().filter(match => {
+    const h = normalizeTeamName(match.home).toLowerCase();
+    const a = normalizeTeamName(match.away).toLowerCase();
+
+    return (
+      (h === home && a === away) ||
+      (h === away && a === home)
+    );
+  });
 }
 
 /**
