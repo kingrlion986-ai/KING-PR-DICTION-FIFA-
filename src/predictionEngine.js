@@ -16,24 +16,9 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-/* Match récent = poids plus important */
+/* Plus récent = plus important */
 function getMatchWeight(index) {
-  return Math.max(0.35, 1 - index * 0.06);
-}
-
-function weightedAvg(values) {
-  if (!values.length) return 0;
-
-  let total = 0;
-  let weights = 0;
-
-  values.forEach((v, i) => {
-    const w = getMatchWeight(i);
-    total += v * w;
-    weights += w;
-  });
-
-  return weights ? total / weights : 0;
+  return Math.max(0.30, 1 - index * 0.055);
 }
 
 function recentMatches(matches, limit = 20) {
@@ -46,6 +31,21 @@ function recentMatches(matches, limit = 20) {
     .slice(0, limit);
 }
 
+function weightedAvg(values) {
+  if (!values.length) return 0;
+
+  let total = 0;
+  let weights = 0;
+
+  values.forEach((value, index) => {
+    const weight = getMatchWeight(index);
+    total += value * weight;
+    weights += weight;
+  });
+
+  return weights ? total / weights : 0;
+}
+
 /* =========================
    ANALYSE ÉQUIPE
 ========================= */
@@ -56,10 +56,8 @@ function analyzeTeam(team) {
 
   let scored = [];
   let conceded = [];
-
   let homeScored = [];
   let homeConceded = [];
-
   let awayScored = [];
   let awayConceded = [];
 
@@ -95,7 +93,7 @@ function analyzeTeam(team) {
       wins++;
       points += 3;
     } else if (gf === ga) {
-      points += 1;
+      points++;
     }
   });
 
@@ -103,12 +101,12 @@ function analyzeTeam(team) {
     if (!list.length) return 0;
 
     const total = list.reduce(
-      (s, x) => s + x.value * x.weight,
+      (sum, x) => sum + x.value * x.weight,
       0
     );
 
     const weights = list.reduce(
-      (s, x) => s + x.weight,
+      (sum, x) => sum + x.weight,
       0
     );
 
@@ -195,14 +193,19 @@ function analyzeH2H(home, away) {
       avg(awayGoals),
 
     homeWinRate:
-  total ? (homeWins / total) * 100 : 0,
+      total
+        ? (homeWins / total) * 100
+        : 0,
 
-drawRate:
-  total ? (draws / total) * 100 : 0,
+    drawRate:
+      total
+        ? (draws / total) * 100
+        : 0,
 
-awayWinRate:
-  total ? (awayWins / total) * 100 : 0
-    
+    awayWinRate:
+      total
+        ? (awayWins / total) * 100
+        : 0
   };
 }
 
@@ -216,9 +219,16 @@ function calculateExpectedGoals(
   h2h
 ) {
   /*
-   * Si une équipe possède des données,
-   * on privilégie ses performances récentes.
+   * Équipe sans données :
+   * on ne fabrique pas une fausse
+   * force offensive/défensive.
    */
+
+  const homeHasData =
+    homeStats.matches > 0;
+
+  const awayHasData =
+    awayStats.matches > 0;
 
   let homeAttack =
     homeStats.homeAvgScored ||
@@ -237,14 +247,18 @@ function calculateExpectedGoals(
     awayStats.avgConceded;
 
   /*
-   * Si les données domicile/extérieur
-   * sont absentes, on revient aux moyennes générales.
+   * Base neutre uniquement lorsqu'il
+   * manque réellement des données.
    */
 
-  if (!homeAttack) homeAttack = 1.25;
-  if (!homeDefense) homeDefense = 1.25;
-  if (!awayAttack) awayAttack = 1.25;
-  if (!awayDefense) awayDefense = 1.25;
+  if (!homeAttack) homeAttack = 1.20;
+  if (!homeDefense) homeDefense = 1.20;
+  if (!awayAttack) awayAttack = 1.20;
+  if (!awayDefense) awayDefense = 1.20;
+
+  /*
+   * Attaque récente + défense adverse.
+   */
 
   let homeXG =
     homeAttack * 0.55 +
@@ -255,28 +269,36 @@ function calculateExpectedGoals(
     homeDefense * 0.45;
 
   /*
-   * H2H uniquement s'il existe.
-   * Faible influence pour éviter de surévaluer
-   * une seule confrontation.
+   * Petit avantage domicile.
    */
 
-  if (h2h.matches >= 2) {
+  if (homeHasData) {
+    homeXG *= 1.05;
+  }
+
+  /*
+   * H2H très faible influence.
+   * Une seule confrontation ne doit
+   * presque jamais modifier le modèle.
+   */
+
+  if (h2h.matches >= 3) {
     homeXG =
-      homeXG * 0.85 +
-      h2h.homeAvgScored * 0.15;
+      homeXG * 0.90 +
+      h2h.homeAvgScored * 0.10;
 
     awayXG =
-      awayXG * 0.85 +
-      h2h.awayAvgScored * 0.15;
+      awayXG * 0.90 +
+      h2h.awayAvgScored * 0.10;
   }
 
   return {
     home: Number(
-      clamp(homeXG, 0.20, 4.00).toFixed(2)
+      clamp(homeXG, 0.20, 3.50).toFixed(2)
     ),
 
     away: Number(
-      clamp(awayXG, 0.20, 4.00).toFixed(2)
+      clamp(awayXG, 0.20, 3.50).toFixed(2)
     )
   };
 }
@@ -304,7 +326,7 @@ function poisson(lambda, k) {
 }
 
 /* =========================
-   MATRICE SCORES
+   MATRICE
 ========================= */
 
 function buildMatrix(homeXG, awayXG) {
@@ -373,7 +395,7 @@ function calculateMarkets(matrix) {
 }
 
 /* =========================
-   TOP SCORES
+   SCORES
 ========================= */
 
 function getTopScores(matrix) {
@@ -389,43 +411,87 @@ function getTopScores(matrix) {
    CONFIANCE
 ========================= */
 
-function calculateConfidence(homeStats, awayStats, markets) {
-  const data = Math.min(
-    100,
-    ((homeStats.matches + awayStats.matches) / 40) * 100
-  );
+function calculateConfidence(
+  homeStats,
+  awayStats,
+  markets
+) {
+  const totalMatches =
+    homeStats.matches +
+    awayStats.matches;
 
-  const home = markets.homeWin * 100;
-  const away = markets.awayWin * 100;
-  const draw = markets.draw * 100;
+  /*
+   * Qualité réelle des données.
+   */
 
-  // Écart entre les deux équipes
-  const gap = Math.abs(home - away);
+  const dataQuality =
+    clamp(
+      Math.round(
+        (totalMatches / 40) * 100
+      ),
+      0,
+      100
+    );
 
-  let base;
+  /*
+   * Écart entre domicile et extérieur.
+   */
 
-  if (draw >= home && draw >= away) {
-    // Le nul est le scénario principal
-    base = 35;
-  } else if (gap < 5) {
-    base = 30;
+  const home =
+    markets.homeWin * 100;
+
+  const away =
+    markets.awayWin * 100;
+
+  const draw =
+    markets.draw * 100;
+
+  const strongest =
+    Math.max(home, away, draw);
+
+  const second =
+    [home, away, draw]
+      .sort((a, b) => b - a)[1];
+
+  const gap =
+    strongest - second;
+
+  /*
+   * Une forte probabilité n'est pas
+   * automatiquement une forte confiance.
+   */
+
+  let confidence;
+
+  if (gap < 3) {
+    confidence = 35;
+  } else if (gap < 6) {
+    confidence = 40;
   } else if (gap < 10) {
-    base = 38;
-  } else if (gap < 20) {
-    base = 52;
-  } else if (gap < 30) {
-    base = 68;
+    confidence = 46;
+  } else if (gap < 15) {
+    confidence = 53;
+  } else if (gap < 22) {
+    confidence = 62;
   } else {
-    base = 80;
+    confidence = 72;
   }
 
-  // Les données augmentent légèrement la confiance,
-  // mais ne peuvent pas transformer un match serré
-  // en prédiction extrêmement sûre.
-  const dataBonus = data * 0.15;
+  /*
+   * Bonus limité pour les données.
+   */
+
+  const dataBonus =
+    Math.min(12, dataQuality * 0.12);
+
+  confidence += dataBonus;
+
+  /*
+   * Limites réalistes.
+   */
 
   return Math.round(
-    clamp(base + dataBonus, 25, 85)
+    clamp(confidence, 25, 82)
   );
 }
 
@@ -439,6 +505,31 @@ function predictMatch(home, away) {
 
   const awayStats =
     analyzeTeam(away);
+
+  /*
+   * Équipe inconnue.
+   */
+
+  if (
+    homeStats.matches === 0 &&
+    awayStats.matches === 0
+  ) {
+    throw new Error(
+      "Aucune donnée historique pour ces deux équipes."
+    );
+  }
+
+  if (homeStats.matches === 0) {
+    throw new Error(
+      `${home} n'existe pas dans les données historiques.`
+    );
+  }
+
+  if (awayStats.matches === 0) {
+    throw new Error(
+      `${away} n'existe pas dans les données historiques.`
+    );
+  }
 
   const h2h =
     analyzeH2H(home, away);
@@ -484,40 +575,6 @@ function predictMatch(home, away) {
       markets
     );
 
-  const mainScore = topScores[0];
-
-const alternativeScores = topScores
-  .slice(1, 3)
-  .map(s => ({
-    score: `${s.homeGoals}-${s.awayGoals}`,
-    probability: +(s.probability * 100).toFixed(1)
-  }));
-
-const risk =
-  confidence < 40
-    ? "Très élevé"
-    : confidence < 55
-      ? "Élevé"
-      : confidence < 70
-        ? "Moyen"
-        : "Faible";
-
-  let message = "";
-
-  const gap =
-    Math.abs(
-      markets.homeWin -
-      markets.awayWin
-    );
-
-  if (gap < 0.08) {
-    message = "Match très serré";
-  } else if (gap < 0.15) {
-    message = "Match serré";
-  } else if (winner === "Nul") {
-    message = "Le nul est fortement possible";
-  }
-
   const dataQuality =
     Math.round(
       clamp(
@@ -527,6 +584,35 @@ const risk =
         100
       )
     );
+
+  const mainScore =
+    topScores[0];
+
+  const gap =
+    Math.abs(
+      markets.homeWin -
+      markets.awayWin
+    );
+
+  let message = "";
+
+  if (gap < 0.05) {
+    message = "Match très serré";
+  } else if (gap < 0.10) {
+    message = "Match serré";
+  } else if (winner === "Nul") {
+    message =
+      "Le nul est fortement possible";
+  }
+
+  const risk =
+    confidence < 40
+      ? "Très élevé"
+      : confidence < 55
+        ? "Élevé"
+        : confidence < 70
+          ? "Moyen"
+          : "Faible";
 
   return {
     match: {
@@ -544,21 +630,25 @@ const risk =
     expectedGoals,
 
     predictions: {
-  winner,
-  confidence,
-  message,
+      winner,
 
-  mainScore: mainScore
-    ? `${mainScore.homeGoals}-${mainScore.awayGoals}`
-    : null,
+      confidence,
 
-  mainScoreProbability: mainScore
-    ? +(mainScore.probability * 100).toFixed(1)
-    : 0,
+      message,
 
-  alternativeScores,
+      mainScore:
+        mainScore
+          ? `${mainScore.homeGoals}-${mainScore.awayGoals}`
+          : null,
 
-  risk,
+      mainScoreProbability:
+        mainScore
+          ? +(
+              mainScore.probability * 100
+            ).toFixed(1)
+          : 0,
+
+      risk,
 
       homeWin:
         +(markets.homeWin * 100).toFixed(1),
