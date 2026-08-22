@@ -399,7 +399,8 @@ awayWin = awayWin / total * 100;
   score: `${s.homeGoals}-${s.awayGoals}`,
   probability: s.probability * 100
 })),
-  
+  },
+
 }
 
 module.exports = {
