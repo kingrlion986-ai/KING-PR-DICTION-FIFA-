@@ -3,10 +3,13 @@ const {
   getHeadToHead
 } = require("./dataEngine");
 
-function avg(v) {
-  return v.length
-    ? v.reduce((a, b) => a + b, 0) / v.length
-    : 0;
+/* =========================
+   OUTILS
+========================= */
+
+function avg(values) {
+  if (!values.length) return 0;
+  return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 function weightedAvg(values, weights) {
@@ -27,16 +30,23 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
+/* =========================
+   MATCHS RÉCENTS
+========================= */
+
 function recentMatches(matches, limit = 10) {
   return [...matches]
-    .filter(m => m && m.date)
     .sort(
       (a, b) =>
-        new Date(b.date).getTime() -
-        new Date(a.date).getTime()
+        new Date(b.date || 0) -
+        new Date(a.date || 0)
     )
     .slice(0, limit);
 }
+
+/* =========================
+   POIDS TEMPOREL
+========================= */
 
 function getMatchWeight(index) {
   if (index < 3) return 1.00;
@@ -46,29 +56,34 @@ function getMatchWeight(index) {
 }
 
 /* =========================
-   ÉQUIPE
+   ANALYSE ÉQUIPE
 ========================= */
 
 function analyzeTeam(team) {
   const all = getTeamMatches(team) || [];
-  const recent = recentMatches(all);
+  const recent = recentMatches(all, 10);
 
-  let scored = [], conceded = [];
+  let scored = [];
+  let conceded = [];
   let weights = [];
 
-  let homeScored = [], homeConceded = [], homeWeights = [];
-  let awayScored = [], awayConceded = [], awayWeights = [];
+  let homeScored = [];
+  let homeConceded = [];
+  let homeWeights = [];
 
-  let winPoints = 0;
-  let totalWeight = 0;
-  let formPoints = [];
+  let awayScored = [];
+  let awayConceded = [];
+  let awayWeights = [];
+
+  let points = [];
 
   for (let i = 0; i < recent.length; i++) {
     const m = recent[i];
     const weight = getMatchWeight(i);
 
     const isHome =
-      m.home.toLowerCase() === team.toLowerCase();
+      m.home.toLowerCase() ===
+      team.toLowerCase();
 
     const gf = isHome
       ? Number(m.homeGoals)
@@ -92,23 +107,20 @@ function analyzeTeam(team) {
       awayWeights.push(weight);
     }
 
-    let points = 0;
-
-    if (gf > ga) points = 3;
-    else if (gf === ga) points = 1;
-
-    winPoints += points * weight;
-    totalWeight += weight;
-
-    formPoints.push(points);
+    if (gf > ga) points.push(3);
+    else if (gf === ga) points.push(1);
+    else points.push(0);
   }
 
   return {
     team,
     matches: all.length,
 
-    avgScored: weightedAvg(scored, weights),
-    avgConceded: weightedAvg(conceded, weights),
+    avgScored:
+      weightedAvg(scored, weights),
+
+    avgConceded:
+      weightedAvg(conceded, weights),
 
     homeAvgScored:
       weightedAvg(homeScored, homeWeights),
@@ -122,16 +134,16 @@ function analyzeTeam(team) {
     awayAvgConceded:
       weightedAvg(awayConceded, awayWeights),
 
-    winRate:
-      totalWeight
-        ? winPoints / (totalWeight * 3)
-        : 0,
+    winRate: recent.length
+      ? weightedAvg(
+          points.map(p => p === 3 ? 1 : 0),
+          weights
+        )
+      : 0,
 
-    form:
-      weightedAvg(
-        formPoints,
-        weights
-      ) / 3,
+    form: recent.length
+      ? weightedAvg(points, weights) / 3
+      : 0,
 
     recentMatches: recent.length
   };
@@ -142,67 +154,139 @@ function analyzeTeam(team) {
 ========================= */
 
 function analyzeH2H(home, away) {
-  const matches = getHeadToHead(home, away) || [];
-  const recent = recentMatches(matches);
+  const matches =
+    getHeadToHead(home, away) || [];
 
-  let hg = [], ag = [];
-  let hw = 0, d = 0, aw = 0;
+  const recent =
+    recentMatches(matches, 10);
+
+  let homeGoals = [];
+  let awayGoals = [];
+
+  let homeWins = 0;
+  let draws = 0;
+  let awayWins = 0;
 
   for (const m of recent) {
-    const original =
-      m.home.toLowerCase() === home.toLowerCase();
+    const originalHome =
+      m.home.toLowerCase() ===
+      home.toLowerCase();
 
-    const h = Number(m.homeGoals);
-    const a = Number(m.awayGoals);
+    const hg = Number(m.homeGoals);
+    const ag = Number(m.awayGoals);
 
-    const homeGoals = original ? h : a;
-    const awayGoals = original ? a : h;
+    if (originalHome) {
+      homeGoals.push(hg);
+      awayGoals.push(ag);
 
-    hg.push(homeGoals);
-    ag.push(awayGoals);
+      if (hg > ag) homeWins++;
+      else if (hg === ag) draws++;
+      else awayWins++;
+    } else {
+      homeGoals.push(ag);
+      awayGoals.push(hg);
 
-    if (homeGoals > awayGoals) hw++;
-    else if (homeGoals === awayGoals) d++;
-    else aw++;
+      if (ag > hg) homeWins++;
+      else if (ag === hg) draws++;
+      else awayWins++;
+    }
   }
 
-  const total = recent.length || 1;
+  const total = recent.length;
 
   return {
-    matches: recent.length,
-    homeAvgScored: avg(hg),
-    homeAvgConceded: avg(ag),
-    awayAvgScored: avg(ag),
-    awayAvgConceded: avg(hg),
-    homeWinRate: hw / total * 100,
-    drawRate: d / total * 100,
-    awayWinRate: aw / total * 100
+    matches: total,
+
+    homeAvgScored:
+      total ? avg(homeGoals) : 0,
+
+    awayAvgScored:
+      total ? avg(awayGoals) : 0,
+
+    homeAvgConceded:
+      total ? avg(awayGoals) : 0,
+
+    awayAvgConceded:
+      total ? avg(homeGoals) : 0,
+
+    homeWinRate:
+      total
+        ? homeWins / total * 100
+        : 0,
+
+    drawRate:
+      total
+        ? draws / total * 100
+        : 0,
+
+    awayWinRate:
+      total
+        ? awayWins / total * 100
+        : 0
   };
 }
 
 /* =========================
-   XG
+   BUTS ATTENDUS
 ========================= */
 
-function calculateExpectedGoals(home, away, h2h) {
+function calculateExpectedGoals(
+  homeStats,
+  awayStats,
+  h2h
+) {
+  const homeAttack =
+    homeStats.homeAvgScored ||
+    homeStats.avgScored ||
+    1;
+
+  const homeDefense =
+    homeStats.homeAvgConceded ||
+    homeStats.avgConceded ||
+    1;
+
+  const awayAttack =
+    awayStats.awayAvgScored ||
+    awayStats.avgScored ||
+    1;
+
+  const awayDefense =
+    awayStats.awayAvgConceded ||
+    awayStats.avgConceded ||
+    1;
+
   let homeXG =
-    (home.homeAvgScored || home.avgScored) * 0.45 +
-    (away.awayAvgConceded || away.avgConceded) * 0.35 +
-    away.avgConceded * 0.20;
+    homeAttack * 0.55 +
+    awayDefense * 0.45;
 
   let awayXG =
-    (away.awayAvgScored || away.avgScored) * 0.45 +
-    (home.homeAvgConceded || home.avgConceded) * 0.35 +
-    home.avgConceded * 0.20;
+    awayAttack * 0.55 +
+    homeDefense * 0.45;
 
-  if (h2h.matches) {
-    homeXG = homeXG * 0.85 + h2h.homeAvgScored * 0.15;
-    awayXG = awayXG * 0.85 + h2h.awayAvgScored * 0.15;
+  /*
+   * H2H très faible influence.
+   * Un seul ancien match ne doit pas
+   * bouleverser toute la prédiction.
+   */
+
+  if (h2h.matches >= 3) {
+    homeXG =
+      homeXG * 0.90 +
+      h2h.homeAvgScored * 0.10;
+
+    awayXG =
+      awayXG * 0.90 +
+      h2h.awayAvgScored * 0.10;
   }
 
   return {
-    home: Number(clamp(homeXG, 0.15, 4.5).toFixed(3)),
-    away: Number(clamp(awayXG, 0.15, 4.5).toFixed(3))
+    home: Number(
+      clamp(homeXG, 0.20, 3.50).toFixed(2)
+    ),
+
+    away: Number(
+      clamp(awayXG, 0.20, 3.50).toFixed(2)
+    )
   };
 }
 
@@ -211,64 +295,107 @@ function calculateExpectedGoals(home, away, h2h) {
 ========================= */
 
 function factorial(n) {
-  let r = 1;
-  for (let i = 2; i <= n; i++) r *= i;
-  return r;
+  let result = 1;
+
+  for (let i = 2; i <= n; i++) {
+    result *= i;
+  }
+
+  return result;
 }
 
 function poisson(lambda, k) {
-  return Math.exp(-lambda) *
+  return (
+    Math.exp(-lambda) *
     Math.pow(lambda, k) /
-    factorial(k);
+    factorial(k)
+  );
 }
 
-function buildScores(homeXG, awayXG) {
+/* =========================
+   DIXON-COLES
+========================= */
+
+function dixonColesCorrection(
+  h,
+  a,
+  homeXG,
+  awayXG,
+  rho = -0.10
+) {
+  if (h === 0 && a === 0) {
+    return 1 -
+      homeXG * awayXG * rho;
+  }
+
+  if (h === 1 && a === 0) {
+    return 1 + awayXG * rho;
+  }
+
+  if (h === 0 && a === 1) {
+    return 1 + homeXG * rho;
+  }
+
+  if (h === 1 && a === 1) {
+    return 1 - rho;
+  }
+
+  return 1;
+}
+
+/* =========================
+   MATRICE DES SCORES
+========================= */
+
+function calculateScores(
+  homeXG,
+  awayXG
+) {
   const scores = [];
 
   for (let h = 0; h <= 8; h++) {
     for (let a = 0; a <= 8; a++) {
+
+      let probability =
+        poisson(homeXG, h) *
+        poisson(awayXG, a);
+
+      probability *=
+        dixonColesCorrection(
+          h,
+          a,
+          homeXG,
+          awayXG
+        );
+
       scores.push({
         homeGoals: h,
         awayGoals: a,
-        probability:
-          poisson(homeXG, h) *
-          poisson(awayXG, a)
+        probability
       });
     }
   }
 
   const total =
-    scores.reduce((s, x) => s + x.probability, 0);
+    scores.reduce(
+      (sum, s) =>
+        sum + s.probability,
+      0
+    );
 
-  return scores.map(x => ({
-    ...x,
-    probability: x.probability / total
-  }));
+  for (const s of scores) {
+    s.probability /= total;
+  }
+
+  return scores;
 }
 
 /* =========================
-   PREDICTION
+   MARCHÉS
 ========================= */
 
-function predictMatch(home, away) {
-  const homeStats = analyzeTeam(home);
-  const awayStats = analyzeTeam(away);
-  const h2h = analyzeH2H(home, away);
-
-  const expectedGoals =
-    calculateExpectedGoals(
-      homeStats,
-      awayStats,
-      h2h
-    );
-
-  const matrix =
-    buildScores(
-      expectedGoals.home,
-      expectedGoals.away
-    );
-
-  let markets = {
+function calculateMarkets(scores) {
+  const markets = {
     homeWin: 0,
     draw: 0,
     awayWin: 0,
@@ -278,77 +405,211 @@ function predictMatch(home, away) {
     bttsNo: 0
   };
 
-  for (const x of matrix) {
-    const h = x.homeGoals;
-    const a = x.awayGoals;
-    const p = x.probability;
+  for (const s of scores) {
+    const h = s.homeGoals;
+    const a = s.awayGoals;
+    const p = s.probability;
 
-    if (h > a) markets.homeWin += p;
-    else if (h === a) markets.draw += p;
-    else markets.awayWin += p;
+    if (h > a)
+      markets.homeWin += p;
+    else if (h === a)
+      markets.draw += p;
+    else
+      markets.awayWin += p;
 
-    if (h + a > 2) markets.over25 += p;
-    else markets.under25 += p;
+    if (h + a > 2)
+      markets.over25 += p;
+    else
+      markets.under25 += p;
 
-    if (h > 0 && a > 0) markets.bttsYes += p;
-    else markets.bttsNo += p;
+    if (h > 0 && a > 0)
+      markets.bttsYes += p;
+    else
+      markets.bttsNo += p;
   }
 
-  const winner =
-    markets.homeWin >= markets.awayWin &&
-    markets.homeWin >= markets.draw
-      ? home
-      : markets.awayWin >= markets.draw
-        ? away
-        : "Nul";
-
-  const totalMatches =
-    homeStats.matches + awayStats.matches;
-
-  const dataQuality =
-    clamp(Math.round(totalMatches / 40 * 100), 0, 100);
-
-  const sorted = [
-  markets.homeWin,
-  markets.draw,
-  markets.awayWin
-].sort((a, b) => b - a);
-
-const separation =
-  (sorted[0] - sorted[1]) * 100;
-
-const confidence = clamp(
-  Math.round(
-    40 +
-    separation * 0.45 +
-    dataQuality * 0.08
-  ),
-  40,
-  80
-);
-
-  let confidenceLevel;
-
-if (confidence >= 65) {
-  confidenceLevel = "Favori";
-} else if (confidence >= 55) {
-  confidenceLevel = "Avantage";
-} else if (confidence >= 45) {
-  confidenceLevel = "Match serré";
-} else {
-  confidenceLevel = "Très serré";
+  return markets;
 }
 
-  const topScores = [...matrix]
-    .sort((a, b) => b.probability - a.probability)
-    .slice(0, 3)
-    .map(x => ({
-      score: `${x.homeGoals}-${x.awayGoals}`,
-      probability: x.probability * 100
-    }));
+/* =========================
+   SCORES PRINCIPAUX
+========================= */
+
+function getTopScores(
+  scores,
+  limit = 3
+) {
+  return [...scores]
+    .sort(
+      (a, b) =>
+        b.probability -
+        a.probability
+    )
+    .slice(0, limit);
+}
+
+/* =========================
+   CONFIANCE
+========================= */
+
+function calculateConfidence(
+  markets,
+  homeStats,
+  awayStats
+) {
+  const sorted = [
+    markets.homeWin,
+    markets.draw,
+    markets.awayWin
+  ].sort((a, b) => b - a);
+
+  const margin =
+    sorted[0] - sorted[1];
+
+  const dataCount =
+    Math.min(
+      homeStats.matches,
+      awayStats.matches
+    );
+
+  const dataFactor =
+    clamp(dataCount / 20, 0, 1);
+
+  /*
+   * Plus les probabilités sont proches,
+   * plus la confiance baisse.
+   */
+
+  let confidence =
+    30 +
+    margin * 100 * 0.70 +
+    dataFactor * 10;
+
+  return Math.round(
+    clamp(confidence, 30, 90)
+  );
+}
+
+/* =========================
+   PRÉDICTION
+========================= */
+
+function predictMatch(home, away) {
+
+  const homeStats =
+    analyzeTeam(home);
+
+  const awayStats =
+    analyzeTeam(away);
+
+  const h2h =
+    analyzeH2H(home, away);
+
+  /*
+   * Si une équipe n'a aucune donnée,
+   * on évite une fausse précision.
+   */
+
+  if (
+    homeStats.matches === 0 ||
+    awayStats.matches === 0
+  ) {
+    return {
+      match: { home, away },
+
+      teams: {
+        home: homeStats,
+        away: awayStats
+      },
+
+      h2h,
+
+      expectedGoals: {
+        home: 0,
+        away: 0
+      },
+
+      predictions: {
+        winner: "Données insuffisantes",
+        confidence: 0,
+        homeWin: 0,
+        draw: 0,
+        awayWin: 0,
+        over25: 0,
+        under25: 0,
+        bttsYes: 0,
+        bttsNo: 0,
+        dataQuality: 0
+      },
+
+      topScores: []
+    };
+  }
+
+  const expectedGoals =
+    calculateExpectedGoals(
+      homeStats,
+      awayStats,
+      h2h
+    );
+
+  const scores =
+    calculateScores(
+      expectedGoals.home,
+      expectedGoals.away
+    );
+
+  const markets =
+    calculateMarkets(scores);
+
+  const topScores =
+    getTopScores(scores, 3);
+
+  let winner;
+
+  if (
+    markets.homeWin >
+      markets.awayWin &&
+    markets.homeWin >
+      markets.draw
+  ) {
+    winner = home;
+  } else if (
+    markets.awayWin >
+      markets.homeWin &&
+    markets.awayWin >
+      markets.draw
+  ) {
+    winner = away;
+  } else {
+    winner = "Nul";
+  }
+
+  const confidence =
+    calculateConfidence(
+      markets,
+      homeStats,
+      awayStats
+    );
+
+  const totalMatches =
+    homeStats.matches +
+    awayStats.matches;
+
+  const dataQuality =
+    Math.round(
+      clamp(
+        totalMatches / 40 * 100,
+        0,
+        100
+      )
+    );
 
   return {
-    match: { home, away },
+    match: {
+      home,
+      away
+    },
 
     teams: {
       home: homeStats,
@@ -356,25 +617,60 @@ if (confidence >= 65) {
     },
 
     h2h,
+
     expectedGoals,
 
     predictions: {
-  winner,
-  confidence,
-      confidenceLevel,
-      homeWin: +(markets.homeWin * 100).toFixed(1),
-      draw: +(markets.draw * 100).toFixed(1),
-      awayWin: +(markets.awayWin * 100).toFixed(1),
-      over25: +(markets.over25 * 100).toFixed(1),
-      under25: +(markets.under25 * 100).toFixed(1),
-      bttsYes: +(markets.bttsYes * 100).toFixed(1),
-      bttsNo: +(markets.bttsNo * 100).toFixed(1),
+      winner,
+
+      confidence,
+
+      homeWin:
+        +(markets.homeWin * 100)
+          .toFixed(1),
+
+      draw:
+        +(markets.draw * 100)
+          .toFixed(1),
+
+      awayWin:
+        +(markets.awayWin * 100)
+          .toFixed(1),
+
+      over25:
+        +(markets.over25 * 100)
+          .toFixed(1),
+
+      under25:
+        +(markets.under25 * 100)
+          .toFixed(1),
+
+      bttsYes:
+        +(markets.bttsYes * 100)
+          .toFixed(1),
+
+      bttsNo:
+        +(markets.bttsNo * 100)
+          .toFixed(1),
+
       dataQuality
     },
 
-    topScores
+    topScores:
+      topScores.map(s => ({
+        score:
+          `${s.homeGoals}-${s.awayGoals}`,
+
+        probability:
+          +(s.probability * 100)
+            .toFixed(1)
+      }))
   };
 }
+
+/* =========================
+   EXPORT
+========================= */
 
 module.exports = {
   predictMatch,
