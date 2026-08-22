@@ -195,13 +195,14 @@ function analyzeH2H(home, away) {
       avg(awayGoals),
 
     homeWinRate:
-      total ? homeWins / total : 0,
+  total ? (homeWins / total) * 100 : 0,
 
-    drawRate:
-      total ? draws / total : 0,
+drawRate:
+  total ? (draws / total) * 100 : 0,
 
-    awayWinRate:
-      total ? awayWins / total : 0
+awayWinRate:
+  total ? (awayWins / total) * 100 : 0
+    
   };
 }
 
