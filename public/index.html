@@ -106,7 +106,8 @@ button:disabled{opacity:.5}
 <section class="card winner">
  <small>VAINQUEUR PROBABLE</small>
  <strong id="winner"></strong>
- Confiance : <span id="confidence" class="conf"></span>
+Confiance : <span id="confidence" class="conf"></span>
+<div id="confidenceLevel"></div>
 </section>
 
 <section class="card">
@@ -213,6 +214,7 @@ function show(x){
  $("match").textContent=`${m.home}  VS  ${m.away}`;
  $("winner").textContent=q.winner;
  $("confidence").textContent=q.confidence+"%";
+ $("confidenceLevel").textContent=q.confidenceLevel||"";
  $("homeWin").textContent=p(q.homeWin);
  $("draw").textContent=p(q.draw);
  $("awayWin").textContent=p(q.awayWin);
