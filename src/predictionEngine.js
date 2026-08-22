@@ -385,25 +385,21 @@ awayWin = awayWin / total * 100;
     predictions: {
   winner: result,
   confidence: dataQuality,
-  homeWin: Number(homeWin.toFixed(1)),
-  draw: Number(draw.toFixed(1)),
-  awayWin: Number(awayWin.toFixed(1)),
-  over25: 0,
-  under25: 0,
-  bttsYes: 0,
-  bttsNo: 0,
+  homeWin: +(markets.homeWin * 100).toFixed(1),
+  draw: +(markets.draw * 100).toFixed(1),
+  awayWin: +(markets.awayWin * 100).toFixed(1),
+  over25: +(markets.over25 * 100).toFixed(1),
+  under25: +(markets.under25 * 100).toFixed(1),
+  bttsYes: +(markets.bttsYes * 100).toFixed(1),
+  bttsNo: +(markets.bttsNo * 100).toFixed(1),
   dataQuality
 },
 
-    topScores:
-      scores.slice(0, 3).map(x => ({
-        score: x.score,
-        probability:
-          Number(
-            (x.probability * 100).toFixed(1)
-          )
-      }))
-  };
+    topScores: topScores.map(s => ({
+  score: `${s.homeGoals}-${s.awayGoals}`,
+  probability: s.probability * 100
+})),
+  
 }
 
 module.exports = {
