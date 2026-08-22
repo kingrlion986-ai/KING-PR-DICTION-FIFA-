@@ -382,14 +382,18 @@ awayWin = awayWin / total * 100;
 
     expectedGoals,
 
-    analysis: {
+    predictions: {
   winner: result,
-  result,
-      homeWin: Number(homeWin.toFixed(1)),
-      draw: Number(draw.toFixed(1)),
-      awayWin: Number(awayWin.toFixed(1)),
-      dataQuality
-    },
+  confidence: dataQuality,
+  homeWin: Number(homeWin.toFixed(1)),
+  draw: Number(draw.toFixed(1)),
+  awayWin: Number(awayWin.toFixed(1)),
+  over25: 0,
+  under25: 0,
+  bttsYes: 0,
+  bttsNo: 0,
+  dataQuality
+},
 
     topScores:
       scores.slice(0, 3).map(x => ({
