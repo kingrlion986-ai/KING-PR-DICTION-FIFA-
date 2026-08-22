@@ -251,6 +251,24 @@ function predictMatch(home, away) {
   const dataQuality =
     clamp(Math.round(totalMatches / 40 * 100), 0, 100);
 
+  const sorted = [
+  markets.homeWin,
+  markets.draw,
+  markets.awayWin
+].sort((a, b) => b - a);
+
+const separation =
+  (sorted[0] - sorted[1]) * 100;
+
+const confidence = clamp(
+  Math.round(
+    separation * 1.2 +
+    dataQuality * 0.25
+  ),
+  35,
+  92
+);
+
   const topScores = [...matrix]
     .sort((a, b) => b.probability - a.probability)
     .slice(0, 3)
@@ -271,8 +289,8 @@ function predictMatch(home, away) {
     expectedGoals,
 
     predictions: {
-      winner,
-      confidence: dataQuality,
+  winner,
+  confidence,
       homeWin: +(markets.homeWin * 100).toFixed(1),
       draw: +(markets.draw * 100).toFixed(1),
       awayWin: +(markets.awayWin * 100).toFixed(1),
