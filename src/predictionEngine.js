@@ -15,7 +15,12 @@ function clamp(n, min, max) {
 
 function recentMatches(matches, limit = 10) {
   return [...matches]
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .filter(m => m && m.date)
+    .sort(
+      (a, b) =>
+        new Date(b.date).getTime() -
+        new Date(a.date).getTime()
+    )
     .slice(0, limit);
 }
 
