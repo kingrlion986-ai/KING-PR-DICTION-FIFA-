@@ -3,13 +3,10 @@ const {
   getHeadToHead
 } = require("./dataEngine");
 
-/* =========================
-   OUTILS
-========================= */
-
-function avg(values) {
-  if (!values.length) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
+function avg(v) {
+  return v.length
+    ? v.reduce((a, b) => a + b, 0) / v.length
+    : 0;
 }
 
 function clamp(n, min, max) {
@@ -23,28 +20,19 @@ function recentMatches(matches, limit = 10) {
 }
 
 /* =========================
-   ANALYSE ÉQUIPE
+   ÉQUIPE
 ========================= */
 
 function analyzeTeam(team) {
-
   const all = getTeamMatches(team) || [];
-  const recent = recentMatches(all, 10);
+  const recent = recentMatches(all);
 
-  let scored = [];
-  let conceded = [];
-
-  let homeScored = [];
-  let homeConceded = [];
-
-  let awayScored = [];
-  let awayConceded = [];
-
-  let wins = 0;
-  let formPoints = [];
+  let scored = [], conceded = [];
+  let homeScored = [], homeConceded = [];
+  let awayScored = [], awayConceded = [];
+  let wins = 0, formPoints = [];
 
   for (const m of recent) {
-
     const isHome =
       m.home.toLowerCase() === team.toLowerCase();
 
@@ -80,24 +68,14 @@ function analyzeTeam(team) {
   return {
     team,
     matches: all.length,
-
     avgScored: avg(scored),
     avgConceded: avg(conceded),
-
     homeAvgScored: avg(homeScored),
     homeAvgConceded: avg(homeConceded),
-
     awayAvgScored: avg(awayScored),
     awayAvgConceded: avg(awayConceded),
-
-    winRate: recent.length
-      ? wins / recent.length
-      : 0,
-
-    form: recent.length
-      ? avg(formPoints) / 3
-      : 0,
-
+    winRate: recent.length ? wins / recent.length : 0,
+    form: recent.length ? avg(formPoints) / 3 : 0,
     recentMatches: recent.length
   };
 }
@@ -107,129 +85,67 @@ function analyzeTeam(team) {
 ========================= */
 
 function analyzeH2H(home, away) {
+  const matches = getHeadToHead(home, away) || [];
+  const recent = recentMatches(matches);
 
-  const matches =
-    getHeadToHead(home, away) || [];
-
-  const recent =
-    recentMatches(matches, 10);
-
-  let homeGoals = [];
-  let awayGoals = [];
-
-  let homeWins = 0;
-  let draws = 0;
-  let awayWins = 0;
+  let hg = [], ag = [];
+  let hw = 0, d = 0, aw = 0;
 
   for (const m of recent) {
-
-    const isOriginal =
+    const original =
       m.home.toLowerCase() === home.toLowerCase();
 
-    const hg = Number(m.homeGoals);
-    const ag = Number(m.awayGoals);
+    const h = Number(m.homeGoals);
+    const a = Number(m.awayGoals);
 
-    if (isOriginal) {
-      homeGoals.push(hg);
-      awayGoals.push(ag);
+    const homeGoals = original ? h : a;
+    const awayGoals = original ? a : h;
 
-      if (hg > ag) homeWins++;
-      else if (hg === ag) draws++;
-      else awayWins++;
+    hg.push(homeGoals);
+    ag.push(awayGoals);
 
-    } else {
-      homeGoals.push(ag);
-      awayGoals.push(hg);
-
-      if (ag > hg) homeWins++;
-      else if (ag === hg) draws++;
-      else awayWins++;
-    }
+    if (homeGoals > awayGoals) hw++;
+    else if (homeGoals === awayGoals) d++;
+    else aw++;
   }
 
   const total = recent.length || 1;
 
   return {
     matches: recent.length,
-
-    homeAvgScored:
-      Number(avg(homeGoals).toFixed(3)),
-
-    homeAvgConceded:
-      Number(avg(awayGoals).toFixed(3)),
-
-    awayAvgScored:
-      Number(avg(awayGoals).toFixed(3)),
-
-    awayAvgConceded:
-      Number(avg(homeGoals).toFixed(3)),
-
-    homeWinRate:
-      Number((homeWins / total * 100).toFixed(1)),
-
-    drawRate:
-      Number((draws / total * 100).toFixed(1)),
-
-    awayWinRate:
-      Number((awayWins / total * 100).toFixed(1))
+    homeAvgScored: avg(hg),
+    homeAvgConceded: avg(ag),
+    awayAvgScored: avg(ag),
+    awayAvgConceded: avg(hg),
+    homeWinRate: hw / total * 100,
+    drawRate: d / total * 100,
+    awayWinRate: aw / total * 100
   };
 }
 
 /* =========================
-   BUTS ATTENDUS
+   XG
 ========================= */
 
-function calculateExpectedGoals(homeStats, awayStats, h2h) {
-
-  const homeRecent =
-    homeStats.homeAvgScored ||
-    homeStats.avgScored ||
-    0;
-
-  const homeDefense =
-    homeStats.homeAvgConceded ||
-    homeStats.avgConceded ||
-    0;
-
-  const awayRecent =
-    awayStats.awayAvgScored ||
-    awayStats.avgScored ||
-    0;
-
-  const awayDefense =
-    awayStats.awayAvgConceded ||
-    awayStats.avgConceded ||
-    0;
-
+function calculateExpectedGoals(home, away, h2h) {
   let homeXG =
-    homeRecent * 0.45 +
-    awayDefense * 0.35 +
-    awayStats.avgConceded * 0.20;
+    (home.homeAvgScored || home.avgScored) * 0.45 +
+    (away.awayAvgConceded || away.avgConceded) * 0.35 +
+    away.avgConceded * 0.20;
 
   let awayXG =
-    awayRecent * 0.45 +
-    homeDefense * 0.35 +
-    homeStats.avgConceded * 0.20;
+    (away.awayAvgScored || away.avgScored) * 0.45 +
+    (home.homeAvgConceded || home.avgConceded) * 0.35 +
+    home.avgConceded * 0.20;
 
-  if (h2h.matches > 0) {
-
-    homeXG =
-      homeXG * 0.85 +
-      h2h.homeAvgScored * 0.15;
-
-    awayXG =
-      awayXG * 0.85 +
-      h2h.awayAvgScored * 0.15;
+  if (h2h.matches) {
+    homeXG = homeXG * 0.85 + h2h.homeAvgScored * 0.15;
+    awayXG = awayXG * 0.85 + h2h.awayAvgScored * 0.15;
   }
 
   return {
-    home: Number(
-      clamp(homeXG, 0.15, 4.5).toFixed(3)
-    ),
-
-    away: Number(
-      clamp(awayXG, 0.15, 4.5).toFixed(3)
-    )
+    home: Number(clamp(homeXG, 0.15, 4.5).toFixed(3)),
+    away: Number(clamp(awayXG, 0.15, 4.5).toFixed(3))
   };
 }
 
@@ -238,65 +154,49 @@ function calculateExpectedGoals(homeStats, awayStats, h2h) {
 ========================= */
 
 function factorial(n) {
-  let result = 1;
-
-  for (let i = 2; i <= n; i++) {
-    result *= i;
-  }
-
-  return result;
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
 }
 
 function poisson(lambda, k) {
-  return (
-    Math.exp(-lambda) *
+  return Math.exp(-lambda) *
     Math.pow(lambda, k) /
-    factorial(k)
-  );
+    factorial(k);
 }
 
-/* =========================
-   SCORES
-========================= */
-
-function calculateScores(homeXG, awayXG) {
-
+function buildScores(homeXG, awayXG) {
   const scores = [];
 
-  for (let h = 0; h <= 6; h++) {
-
-    for (let a = 0; a <= 6; a++) {
-
-      const probability =
-        poisson(homeXG, h) *
-        poisson(awayXG, a);
-
+  for (let h = 0; h <= 8; h++) {
+    for (let a = 0; a <= 8; a++) {
       scores.push({
-        score: `${h}-${a}`,
-        probability
+        homeGoals: h,
+        awayGoals: a,
+        probability:
+          poisson(homeXG, h) *
+          poisson(awayXG, a)
       });
     }
   }
 
-  return scores.sort(
-    (a, b) => b.probability - a.probability
-  );
+  const total =
+    scores.reduce((s, x) => s + x.probability, 0);
+
+  return scores.map(x => ({
+    ...x,
+    probability: x.probability / total
+  }));
 }
 
 /* =========================
-   ISSUE ANALYSE
+   PREDICTION
 ========================= */
 
 function predictMatch(home, away) {
-
-  const homeStats =
-    analyzeTeam(home);
-
-  const awayStats =
-    analyzeTeam(away);
-
-  const h2h =
-    analyzeH2H(home, away);
+  const homeStats = analyzeTeam(home);
+  const awayStats = analyzeTeam(away);
+  const h2h = analyzeH2H(home, away);
 
   const expectedGoals =
     calculateExpectedGoals(
@@ -305,73 +205,62 @@ function predictMatch(home, away) {
       h2h
     );
 
-  const scores =
-    calculateScores(
+  const matrix =
+    buildScores(
       expectedGoals.home,
       expectedGoals.away
     );
 
-  /*
-   * Probabilités statistiques.
-   * Elles servent uniquement à résumer
-   * les données historiques.
-   */
+  let markets = {
+    homeWin: 0,
+    draw: 0,
+    awayWin: 0,
+    over25: 0,
+    under25: 0,
+    bttsYes: 0,
+    bttsNo: 0
+  };
 
-  let homeWin = 0;
-let draw = 0;
-let awayWin = 0;
+  for (const x of matrix) {
+    const h = x.homeGoals;
+    const a = x.awayGoals;
+    const p = x.probability;
 
-for (const s of scores) {
-  const [h, a] = s.score.split("-").map(Number);
+    if (h > a) markets.homeWin += p;
+    else if (h === a) markets.draw += p;
+    else markets.awayWin += p;
 
-  if (h > a) homeWin += s.probability;
-  else if (h === a) draw += s.probability;
-  else awayWin += s.probability;
-}
+    if (h + a > 2) markets.over25 += p;
+    else markets.under25 += p;
 
-const total = homeWin + draw + awayWin;
-
-homeWin = homeWin / total * 100;
-draw = draw / total * 100;
-awayWin = awayWin / total * 100;
-  
-  let result;
-
-  if (
-    homeWin >= awayWin &&
-    homeWin >= draw
-  ) {
-    result = home;
-  } else if (awayWin >= draw) {
-    result = away;
-  } else {
-    result = "Nul";
+    if (h > 0 && a > 0) markets.bttsYes += p;
+    else markets.bttsNo += p;
   }
 
-  /*
-   * Qualité basée sur le nombre réel
-   * de données disponibles.
-   */
+  const winner =
+    markets.homeWin >= markets.awayWin &&
+    markets.homeWin >= markets.draw
+      ? home
+      : markets.awayWin >= markets.draw
+        ? away
+        : "Nul";
 
   const totalMatches =
-    homeStats.matches +
-    awayStats.matches;
+    homeStats.matches + awayStats.matches;
 
   const dataQuality =
-    clamp(
-      Math.round(
-        totalMatches / 40 * 100
-      ),
-      0,
-      100
-    );
+    clamp(Math.round(totalMatches / 40 * 100), 0, 100);
+
+  const topScores = [...matrix]
+    .sort((a, b) => b.probability - a.probability)
+    .slice(0, 3)
+    .map(x => ({
+      score: `${x.homeGoals}-${x.awayGoals}`,
+      probability: x.probability * 100
+    }));
 
   return {
-
-    match: {
-      home,
-      away
-    },
+    match: { home, away },
 
     teams: {
       home: homeStats,
@@ -379,26 +268,24 @@ awayWin = awayWin / total * 100;
     },
 
     h2h,
-
     expectedGoals,
 
     predictions: {
-  winner: result,
-  confidence: dataQuality,
-  homeWin: +(markets.homeWin * 100).toFixed(1),
-  draw: +(markets.draw * 100).toFixed(1),
-  awayWin: +(markets.awayWin * 100).toFixed(1),
-  over25: +(markets.over25 * 100).toFixed(1),
-  under25: +(markets.under25 * 100).toFixed(1),
-  bttsYes: +(markets.bttsYes * 100).toFixed(1),
-  bttsNo: +(markets.bttsNo * 100).toFixed(1),
-  dataQuality
-},
+      winner,
+      confidence: dataQuality,
+      homeWin: +(markets.homeWin * 100).toFixed(1),
+      draw: +(markets.draw * 100).toFixed(1),
+      awayWin: +(markets.awayWin * 100).toFixed(1),
+      over25: +(markets.over25 * 100).toFixed(1),
+      under25: +(markets.under25 * 100).toFixed(1),
+      bttsYes: +(markets.bttsYes * 100).toFixed(1),
+      bttsNo: +(markets.bttsNo * 100).toFixed(1),
+      dataQuality
+    },
 
-    topScores: topScores.map(s => ({
-  score: `${s.homeGoals}-${s.awayGoals}`,
-  probability: s.probability * 100
-})),
+    topScores
+  };
+}
 
 module.exports = {
   predictMatch,
