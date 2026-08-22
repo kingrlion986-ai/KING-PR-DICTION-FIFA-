@@ -317,37 +317,24 @@ function predictMatch(home, away) {
    * les données historiques.
    */
 
-  let homeStrength =
-    expectedGoals.home +
-    homeStats.form * 0.35;
+  let homeWin = 0;
+let draw = 0;
+let awayWin = 0;
 
-  let awayStrength =
-    expectedGoals.away +
-    awayStats.form * 0.35;
+for (const s of scores) {
+  const [h, a] = s.score.split("-").map(Number);
 
-  if (h2h.matches > 0) {
+  if (h > a) homeWin += s.probability;
+  else if (h === a) draw += s.probability;
+  else awayWin += s.probability;
+}
 
-    homeStrength +=
-      h2h.homeWinRate / 100 * 0.25;
+const total = homeWin + draw + awayWin;
 
-    awayStrength +=
-      h2h.awayWinRate / 100 * 0.25;
-  }
-
-  const total =
-    homeStrength +
-    awayStrength +
-    1;
-
-  const homeWin =
-    homeStrength / total * 100;
-
-  const awayWin =
-    awayStrength / total * 100;
-
-  const draw =
-    100 - homeWin - awayWin;
-
+homeWin = homeWin / total * 100;
+draw = draw / total * 100;
+awayWin = awayWin / total * 100;
+  
   let result;
 
   if (
