@@ -262,12 +262,12 @@ const separation =
 
 const confidence = clamp(
   Math.round(
-    50 +
-    separation * 0.8 +
-    dataQuality * 0.15
+    40 +
+    separation * 0.45 +
+    dataQuality * 0.08
   ),
   40,
-  85
+  80
 );
 
   const topScores = [...matrix]
