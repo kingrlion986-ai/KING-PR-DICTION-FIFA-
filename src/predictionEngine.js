@@ -383,7 +383,8 @@ awayWin = awayWin / total * 100;
     expectedGoals,
 
     analysis: {
-      result,
+  winner: result,
+  result,
       homeWin: Number(homeWin.toFixed(1)),
       draw: Number(draw.toFixed(1)),
       awayWin: Number(awayWin.toFixed(1)),
