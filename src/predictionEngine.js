@@ -484,6 +484,24 @@ function predictMatch(home, away) {
       markets
     );
 
+  const mainScore = topScores[0];
+
+const alternativeScores = topScores
+  .slice(1, 3)
+  .map(s => ({
+    score: `${s.homeGoals}-${s.awayGoals}`,
+    probability: +(s.probability * 100).toFixed(1)
+  }));
+
+const risk =
+  confidence < 40
+    ? "Très élevé"
+    : confidence < 55
+      ? "Élevé"
+      : confidence < 70
+        ? "Moyen"
+        : "Faible";
+
   let message = "";
 
   const gap =
@@ -526,11 +544,21 @@ function predictMatch(home, away) {
     expectedGoals,
 
     predictions: {
-      winner,
+  winner,
+  confidence,
+  message,
 
-      confidence,
+  mainScore: mainScore
+    ? `${mainScore.homeGoals}-${mainScore.awayGoals}`
+    : null,
 
-      message,
+  mainScoreProbability: mainScore
+    ? +(mainScore.probability * 100).toFixed(1)
+    : 0,
+
+  alternativeScores,
+
+  risk,
 
       homeWin:
         +(markets.homeWin * 100).toFixed(1),
