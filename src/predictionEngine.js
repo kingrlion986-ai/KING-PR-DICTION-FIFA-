@@ -270,6 +270,18 @@ const confidence = clamp(
   80
 );
 
+  let confidenceLevel;
+
+if (confidence >= 65) {
+  confidenceLevel = "Favori";
+} else if (confidence >= 55) {
+  confidenceLevel = "Avantage";
+} else if (confidence >= 45) {
+  confidenceLevel = "Match serré";
+} else {
+  confidenceLevel = "Très serré";
+}
+
   const topScores = [...matrix]
     .sort((a, b) => b.probability - a.probability)
     .slice(0, 3)
@@ -292,6 +304,7 @@ const confidence = clamp(
     predictions: {
   winner,
   confidence,
+      confidenceLevel,
       homeWin: +(markets.homeWin * 100).toFixed(1),
       draw: +(markets.draw * 100).toFixed(1),
       awayWin: +(markets.awayWin * 100).toFixed(1),
