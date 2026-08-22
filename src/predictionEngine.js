@@ -389,39 +389,43 @@ function getTopScores(matrix) {
    CONFIANCE
 ========================= */
 
-function calculateConfidence(
-  homeStats,
-  awayStats,
-  markets
-) {
-  const data =
-    Math.min(
-      100,
-      ((homeStats.matches +
-        awayStats.matches) / 40) * 100
-    );
+function calculateConfidence(homeStats, awayStats, markets) {
+  const data = Math.min(
+    100,
+    ((homeStats.matches + awayStats.matches) / 40) * 100
+  );
 
-  const difference =
-    Math.abs(
-      markets.homeWin -
-      markets.awayWin
-    );
+  const home = markets.homeWin * 100;
+  const away = markets.awayWin * 100;
+  const draw = markets.draw * 100;
 
-  const certainty =
-    difference * 100;
+  // Écart entre les deux équipes
+  const gap = Math.abs(home - away);
 
-  /*
-   * La confiance dépend :
-   * - de la quantité de données
-   * - de l'écart entre les équipes
-   */
+  let base;
 
-  let confidence =
-    data * 0.55 +
-    certainty * 0.45;
+  if (draw >= home && draw >= away) {
+    // Le nul est le scénario principal
+    base = 35;
+  } else if (gap < 5) {
+    base = 30;
+  } else if (gap < 10) {
+    base = 38;
+  } else if (gap < 20) {
+    base = 52;
+  } else if (gap < 30) {
+    base = 68;
+  } else {
+    base = 80;
+  }
+
+  // Les données augmentent légèrement la confiance,
+  // mais ne peuvent pas transformer un match serré
+  // en prédiction extrêmement sûre.
+  const dataBonus = data * 0.15;
 
   return Math.round(
-    clamp(confidence, 20, 95)
+    clamp(base + dataBonus, 25, 85)
   );
 }
 
