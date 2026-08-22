@@ -9,6 +9,20 @@ function avg(v) {
     : 0;
 }
 
+function weightedAvg(values, weights) {
+  if (!values.length) return 0;
+
+  let total = 0;
+  let weightTotal = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    total += values[i] * weights[i];
+    weightTotal += weights[i];
+  }
+
+  return weightTotal ? total / weightTotal : 0;
+}
+
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
@@ -24,6 +38,13 @@ function recentMatches(matches, limit = 10) {
     .slice(0, limit);
 }
 
+function getMatchWeight(index) {
+  if (index < 3) return 1.00;
+  if (index < 6) return 0.85;
+  if (index < 8) return 0.75;
+  return 0.65;
+}
+
 /* =========================
    ÉQUIPE
 ========================= */
@@ -33,11 +54,19 @@ function analyzeTeam(team) {
   const recent = recentMatches(all);
 
   let scored = [], conceded = [];
-  let homeScored = [], homeConceded = [];
-  let awayScored = [], awayConceded = [];
-  let wins = 0, formPoints = [];
+  let weights = [];
 
-  for (const m of recent) {
+  let homeScored = [], homeConceded = [], homeWeights = [];
+  let awayScored = [], awayConceded = [], awayWeights = [];
+
+  let winPoints = 0;
+  let totalWeight = 0;
+  let formPoints = [];
+
+  for (let i = 0; i < recent.length; i++) {
+    const m = recent[i];
+    const weight = getMatchWeight(i);
+
     const isHome =
       m.home.toLowerCase() === team.toLowerCase();
 
@@ -51,36 +80,59 @@ function analyzeTeam(team) {
 
     scored.push(gf);
     conceded.push(ga);
+    weights.push(weight);
 
     if (isHome) {
       homeScored.push(gf);
       homeConceded.push(ga);
+      homeWeights.push(weight);
     } else {
       awayScored.push(gf);
       awayConceded.push(ga);
+      awayWeights.push(weight);
     }
 
-    if (gf > ga) {
-      wins++;
-      formPoints.push(3);
-    } else if (gf === ga) {
-      formPoints.push(1);
-    } else {
-      formPoints.push(0);
-    }
+    let points = 0;
+
+    if (gf > ga) points = 3;
+    else if (gf === ga) points = 1;
+
+    winPoints += points * weight;
+    totalWeight += weight;
+
+    formPoints.push(points);
   }
 
   return {
     team,
     matches: all.length,
-    avgScored: avg(scored),
-    avgConceded: avg(conceded),
-    homeAvgScored: avg(homeScored),
-    homeAvgConceded: avg(homeConceded),
-    awayAvgScored: avg(awayScored),
-    awayAvgConceded: avg(awayConceded),
-    winRate: recent.length ? wins / recent.length : 0,
-    form: recent.length ? avg(formPoints) / 3 : 0,
+
+    avgScored: weightedAvg(scored, weights),
+    avgConceded: weightedAvg(conceded, weights),
+
+    homeAvgScored:
+      weightedAvg(homeScored, homeWeights),
+
+    homeAvgConceded:
+      weightedAvg(homeConceded, homeWeights),
+
+    awayAvgScored:
+      weightedAvg(awayScored, awayWeights),
+
+    awayAvgConceded:
+      weightedAvg(awayConceded, awayWeights),
+
+    winRate:
+      totalWeight
+        ? winPoints / (totalWeight * 3)
+        : 0,
+
+    form:
+      weightedAvg(
+        formPoints,
+        weights
+      ) / 3,
+
     recentMatches: recent.length
   };
 }
