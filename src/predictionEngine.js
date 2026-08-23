@@ -16,19 +16,35 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-/* Plus récent = plus important */
-function getMatchWeight(index) {
-  return Math.max(0.30, 1 - index * 0.055);
+function teamKey(name) {
+  return String(name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
 }
 
+/* =========================
+   MATCHS RÉCENTS
+========================= */
+
 function recentMatches(matches, limit = 20) {
-  return [...matches]
-    .filter(m => m && m.date)
+  return [...(matches || [])]
+    .filter(m => m && m.date && !isNaN(new Date(m.date)))
     .sort(
       (a, b) =>
-        new Date(b.date) - new Date(a.date)
+        new Date(b.date).getTime() -
+        new Date(a.date).getTime()
     )
     .slice(0, limit);
+}
+
+/* =========================
+   POIDS RÉCENT
+========================= */
+
+function getMatchWeight(index) {
+  return Math.max(0.40, 1 - index * 0.045);
 }
 
 function weightedAvg(values) {
@@ -54,19 +70,19 @@ function analyzeTeam(team) {
   const all = getTeamMatches(team) || [];
   const recent = recentMatches(all, 20);
 
-  let scored = [];
-  let conceded = [];
-  let homeScored = [];
-  let homeConceded = [];
-  let awayScored = [];
-  let awayConceded = [];
+  const scored = [];
+  const conceded = [];
+  const homeScored = [];
+  const homeConceded = [];
+  const awayScored = [];
+  const awayConceded = [];
 
   let points = 0;
   let wins = 0;
 
-  recent.forEach((m, i) => {
+  recent.forEach((m, index) => {
     const isHome =
-      m.home.toLowerCase() === team.toLowerCase();
+      teamKey(m.home) === teamKey(team);
 
     const gf = isHome
       ? Number(m.homeGoals)
@@ -76,7 +92,11 @@ function analyzeTeam(team) {
       ? Number(m.awayGoals)
       : Number(m.homeGoals);
 
-    const weight = getMatchWeight(i);
+    if (!Number.isFinite(gf) || !Number.isFinite(ga)) {
+      return;
+    }
+
+    const weight = getMatchWeight(index);
 
     scored.push({ value: gf, weight });
     conceded.push({ value: ga, weight });
@@ -93,22 +113,20 @@ function analyzeTeam(team) {
       wins++;
       points += 3;
     } else if (gf === ga) {
-      points++;
+      points += 1;
     }
   });
 
   function wavg(list) {
     if (!list.length) return 0;
 
-    const total = list.reduce(
-      (sum, x) => sum + x.value * x.weight,
-      0
-    );
+    let total = 0;
+    let weights = 0;
 
-    const weights = list.reduce(
-      (sum, x) => sum + x.weight,
-      0
-    );
+    for (const item of list) {
+      total += item.value * item.weight;
+      weights += item.weight;
+    }
 
     return weights ? total / weights : 0;
   }
@@ -147,7 +165,7 @@ function analyzeH2H(home, away) {
     getHeadToHead(home, away) || [];
 
   const recent =
-    recentMatches(matches, 10);
+    recentMatches(matches, 5);
 
   let homeGoals = [];
   let awayGoals = [];
@@ -158,11 +176,14 @@ function analyzeH2H(home, away) {
 
   recent.forEach(m => {
     const original =
-      m.home.toLowerCase() ===
-      home.toLowerCase();
+      teamKey(m.home) === teamKey(home);
 
     const hg = Number(m.homeGoals);
     const ag = Number(m.awayGoals);
+
+    if (!Number.isFinite(hg) || !Number.isFinite(ag)) {
+      return;
+    }
 
     if (original) {
       homeGoals.push(hg);
@@ -181,31 +202,22 @@ function analyzeH2H(home, away) {
     }
   });
 
-  const total = recent.length;
+  const total = homeGoals.length;
 
   return {
     matches: total,
 
-    homeAvgScored:
-      avg(homeGoals),
-
-    awayAvgScored:
-      avg(awayGoals),
+    homeAvgScored: avg(homeGoals),
+    awayAvgScored: avg(awayGoals),
 
     homeWinRate:
-      total
-        ? (homeWins / total) * 100
-        : 0,
+      total ? homeWins / total : 0,
 
     drawRate:
-      total
-        ? (draws / total) * 100
-        : 0,
+      total ? draws / total : 0,
 
     awayWinRate:
-      total
-        ? (awayWins / total) * 100
-        : 0
+      total ? awayWins / total : 0
   };
 }
 
@@ -218,71 +230,43 @@ function calculateExpectedGoals(
   awayStats,
   h2h
 ) {
-  /*
-   * Équipe sans données :
-   * on ne fabrique pas une fausse
-   * force offensive/défensive.
-   */
-
-  const homeHasData =
-    homeStats.matches > 0;
-
-  const awayHasData =
-    awayStats.matches > 0;
-
-  let homeAttack =
+  const homeAttack =
     homeStats.homeAvgScored ||
-    homeStats.avgScored;
+    homeStats.avgScored ||
+    1.25;
 
-  let homeDefense =
+  const homeDefense =
     homeStats.homeAvgConceded ||
-    homeStats.avgConceded;
+    homeStats.avgConceded ||
+    1.25;
 
-  let awayAttack =
+  const awayAttack =
     awayStats.awayAvgScored ||
-    awayStats.avgScored;
+    awayStats.avgScored ||
+    1.25;
 
-  let awayDefense =
+  const awayDefense =
     awayStats.awayAvgConceded ||
-    awayStats.avgConceded;
+    awayStats.avgConceded ||
+    1.25;
 
   /*
-   * Base neutre uniquement lorsqu'il
-   * manque réellement des données.
-   */
-
-  if (!homeAttack) homeAttack = 1.20;
-  if (!homeDefense) homeDefense = 1.20;
-  if (!awayAttack) awayAttack = 1.20;
-  if (!awayDefense) awayDefense = 1.20;
-
-  /*
-   * Attaque récente + défense adverse.
+   * Mélange attaque + défense.
    */
 
   let homeXG =
-    homeAttack * 0.55 +
-    awayDefense * 0.45;
+    homeAttack * 0.60 +
+    awayDefense * 0.40;
 
   let awayXG =
-    awayAttack * 0.55 +
-    homeDefense * 0.45;
+    awayAttack * 0.60 +
+    homeDefense * 0.40;
 
   /*
-   * Petit avantage domicile.
+   * H2H seulement avec au moins 2 matchs.
    */
 
-  if (homeHasData) {
-    homeXG *= 1.05;
-  }
-
-  /*
-   * H2H très faible influence.
-   * Une seule confrontation ne doit
-   * presque jamais modifier le modèle.
-   */
-
-  if (h2h.matches >= 3) {
+  if (h2h.matches >= 2) {
     homeXG =
       homeXG * 0.90 +
       h2h.homeAvgScored * 0.10;
@@ -292,14 +276,16 @@ function calculateExpectedGoals(
       h2h.awayAvgScored * 0.10;
   }
 
-  return {
-    home: Number(
-      clamp(homeXG, 0.20, 3.50).toFixed(2)
-    ),
+  /*
+   * Évite les valeurs extrêmes.
+   */
 
-    away: Number(
-      clamp(awayXG, 0.20, 3.50).toFixed(2)
-    )
+  homeXG = clamp(homeXG, 0.35, 3.50);
+  awayXG = clamp(awayXG, 0.35, 3.50);
+
+  return {
+    home: Number(homeXG.toFixed(2)),
+    away: Number(awayXG.toFixed(2))
   };
 }
 
@@ -308,13 +294,13 @@ function calculateExpectedGoals(
 ========================= */
 
 function factorial(n) {
-  let r = 1;
+  let result = 1;
 
   for (let i = 2; i <= n; i++) {
-    r *= i;
+    result *= i;
   }
 
-  return r;
+  return result;
 }
 
 function poisson(lambda, k) {
@@ -345,14 +331,15 @@ function buildMatrix(homeXG, awayXG) {
   }
 
   const total = matrix.reduce(
-    (sum, x) => sum + x.probability,
+    (sum, item) =>
+      sum + item.probability,
     0
   );
 
-  return matrix.map(x => ({
-    ...x,
+  return matrix.map(item => ({
+    ...item,
     probability:
-      x.probability / total
+      item.probability / total
   }));
 }
 
@@ -361,7 +348,7 @@ function buildMatrix(homeXG, awayXG) {
 ========================= */
 
 function calculateMarkets(matrix) {
-  const r = {
+  const result = {
     homeWin: 0,
     draw: 0,
     awayWin: 0,
@@ -371,40 +358,41 @@ function calculateMarkets(matrix) {
     bttsNo: 0
   };
 
-  for (const x of matrix) {
-    const h = x.homeGoals;
-    const a = x.awayGoals;
-    const p = x.probability;
+  for (const item of matrix) {
+    const h = item.homeGoals;
+    const a = item.awayGoals;
+    const p = item.probability;
 
-    if (h > a) r.homeWin += p;
-    else if (h === a) r.draw += p;
-    else r.awayWin += p;
+    if (h > a) result.homeWin += p;
+    else if (h === a) result.draw += p;
+    else result.awayWin += p;
 
-    if (h + a > 2)
-      r.over25 += p;
+    if (h + a >= 3)
+      result.over25 += p;
     else
-      r.under25 += p;
+      result.under25 += p;
 
     if (h > 0 && a > 0)
-      r.bttsYes += p;
+      result.bttsYes += p;
     else
-      r.bttsNo += p;
+      result.bttsNo += p;
   }
 
-  return r;
+  return result;
 }
 
 /* =========================
    SCORES
 ========================= */
 
-function getTopScores(matrix) {
+function getTopScores(matrix, limit = 5) {
   return [...matrix]
     .sort(
       (a, b) =>
-        b.probability - a.probability
+        b.probability -
+        a.probability
     )
-    .slice(0, 5);
+    .slice(0, limit);
 }
 
 /* =========================
@@ -417,82 +405,73 @@ function calculateConfidence(
   markets
 ) {
   const totalMatches =
-    homeStats.matches +
-    awayStats.matches;
+    homeStats.recentMatches +
+    awayStats.recentMatches;
 
   /*
-   * Qualité réelle des données.
+   * Plus les données récentes sont nombreuses,
+   * plus la confiance augmente.
    */
+  const dataScore = clamp(
+    totalMatches / 40,
+    0,
+    1
+  );
 
-  const dataQuality =
-    clamp(
-      Math.round(
-        (totalMatches / 40) * 100
-      ),
-      0,
-      100
-    );
-
-  /*
-   * Écart entre domicile et extérieur.
-   */
-
-  const home =
-    markets.homeWin * 100;
-
-  const away =
-    markets.awayWin * 100;
-
-  const draw =
-    markets.draw * 100;
+  const probabilities = [
+    markets.homeWin,
+    markets.draw,
+    markets.awayWin
+  ].sort((a, b) => b - a);
 
   const strongest =
-    Math.max(home, away, draw);
+    probabilities[0];
 
   const second =
-    [home, away, draw]
-      .sort((a, b) => b - a)[1];
+    probabilities[1];
 
-  const gap =
+  const separation =
     strongest - second;
 
-  /*
-   * Une forte probabilité n'est pas
-   * automatiquement une forte confiance.
-   */
+  let confidence = 30;
 
-  let confidence;
-
-  if (gap < 3) {
+  if (separation >= 0.20)
+    confidence = 75;
+  else if (separation >= 0.15)
+    confidence = 65;
+  else if (separation >= 0.10)
+    confidence = 55;
+  else if (separation >= 0.05)
+    confidence = 45;
+  else
     confidence = 35;
-  } else if (gap < 6) {
-    confidence = 40;
-  } else if (gap < 10) {
-    confidence = 46;
-  } else if (gap < 15) {
-    confidence = 53;
-  } else if (gap < 22) {
-    confidence = 62;
-  } else {
-    confidence = 72;
-  }
 
-  /*
-   * Bonus limité pour les données.
-   */
-
-  const dataBonus =
-    Math.min(12, dataQuality * 0.12);
-
-  confidence += dataBonus;
-
-  /*
-   * Limites réalistes.
-   */
+  confidence +=
+    dataScore * 10;
 
   return Math.round(
-    clamp(confidence, 25, 82)
+    clamp(confidence, 25, 80)
   );
+}
+
+/* =========================
+   NIVEAU DE RISQUE
+========================= */
+
+function getRisk(confidence) {
+  if (confidence < 40)
+    return "Très élevé";
+
+  if (confidence < 50)
+    return "Élevé";
+
+  if (confidence < 65)
+    return "Moyen";
+
+  if (confidence < 75)
+    return "Faible";
+
+  return "Très faible";
 }
 
 /* =========================
@@ -505,31 +484,6 @@ function predictMatch(home, away) {
 
   const awayStats =
     analyzeTeam(away);
-
-  /*
-   * Équipe inconnue.
-   */
-
-  if (
-    homeStats.matches === 0 &&
-    awayStats.matches === 0
-  ) {
-    throw new Error(
-      "Aucune donnée historique pour ces deux équipes."
-    );
-  }
-
-  if (homeStats.matches === 0) {
-    throw new Error(
-      `${home} n'existe pas dans les données historiques.`
-    );
-  }
-
-  if (awayStats.matches === 0) {
-    throw new Error(
-      `${away} n'existe pas dans les données historiques.`
-    );
-  }
 
   const h2h =
     analyzeH2H(home, away);
@@ -551,7 +505,7 @@ function predictMatch(home, away) {
     calculateMarkets(matrix);
 
   const topScores =
-    getTopScores(matrix);
+    getTopScores(matrix, 5);
 
   let winner;
 
@@ -575,18 +529,8 @@ function predictMatch(home, away) {
       markets
     );
 
-  const dataQuality =
-    Math.round(
-      clamp(
-        ((homeStats.matches +
-          awayStats.matches) / 40) * 100,
-        0,
-        100
-      )
-    );
-
-  const mainScore =
-    topScores[0];
+  const risk =
+    getRisk(confidence);
 
   const gap =
     Math.abs(
@@ -601,18 +545,25 @@ function predictMatch(home, away) {
   } else if (gap < 0.10) {
     message = "Match serré";
   } else if (winner === "Nul") {
-    message =
-      "Le nul est fortement possible";
+    message = "Le nul est fortement possible";
+  } else {
+    message = "Avantage statistique";
   }
 
-  const risk =
-    confidence < 40
-      ? "Très élevé"
-      : confidence < 55
-        ? "Élevé"
-        : confidence < 70
-          ? "Moyen"
-          : "Faible";
+  const dataQuality =
+    Math.round(
+      clamp(
+        (
+          homeStats.recentMatches +
+          awayStats.recentMatches
+        ) / 40 * 100,
+        0,
+        100
+      )
+    );
+
+  const mainScore =
+    topScores[0];
 
   return {
     match: {
@@ -632,22 +583,13 @@ function predictMatch(home, away) {
     predictions: {
       winner,
 
+      /*
+       * Important :
+       * confidence ≠ probabilité de victoire.
+       */
       confidence,
 
       message,
-
-      mainScore:
-        mainScore
-          ? `${mainScore.homeGoals}-${mainScore.awayGoals}`
-          : null,
-
-      mainScoreProbability:
-        mainScore
-          ? +(
-              mainScore.probability * 100
-            ).toFixed(1)
-          : 0,
-
       risk,
 
       homeWin:
@@ -671,16 +613,24 @@ function predictMatch(home, away) {
       bttsNo:
         +(markets.bttsNo * 100).toFixed(1),
 
+      mainScore: mainScore
+        ? `${mainScore.homeGoals}-${mainScore.awayGoals}`
+        : null,
+
+      mainScoreProbability: mainScore
+        ? +(mainScore.probability * 100).toFixed(1)
+        : 0,
+
       dataQuality
     },
 
     topScores:
-      topScores.map(s => ({
+      topScores.map(item => ({
         score:
-          `${s.homeGoals}-${s.awayGoals}`,
+          `${item.homeGoals}-${item.awayGoals}`,
 
         probability:
-          +(s.probability * 100).toFixed(2)
+          +(item.probability * 100).toFixed(1)
       }))
   };
 }
