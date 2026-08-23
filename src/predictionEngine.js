@@ -3,404 +3,233 @@ const {
   getHeadToHead
 } = require("./dataEngine");
 
-/* =========================
-   OUTILS
-========================= */
+/* OUTILS */
 
-function avg(values) {
-  if (!values.length) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
+function avg(a) {
+  return a.length
+    ? a.reduce((x, y) => x + y, 0) / a.length
+    : 0;
 }
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-function teamKey(name) {
-  return String(name || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "");
-}
-
-/* =========================
-   TRI DATE + HEURE
-========================= */
-
-function recentMatches(matches, limit = 20) {
-  return [...(matches || [])]
-    .filter(m => {
-      if (!m || !m.date) return false;
-      return !Number.isNaN(
-        new Date(m.date).getTime()
-      );
-    })
-    .sort(
-      (a, b) =>
-        new Date(b.date).getTime() -
-        new Date(a.date).getTime()
-    )
+function recent(matches, limit = 20) {
+  return [...matches]
+    .filter(m => m && m.date)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, limit);
 }
 
-/* =========================
-   POIDS DES MATCHS
-========================= */
-
-function getMatchWeight(index) {
-  return Math.max(
-    0.40,
-    1 - index * 0.045
-  );
+function weight(i) {
+  return Math.max(0.35, 1 - i * 0.06);
 }
 
-function weightedAverage(list) {
-  if (!list.length) return 0;
+function wavg(values) {
+  let sum = 0, w = 0;
 
-  let total = 0;
-  let weights = 0;
-
-  list.forEach((value, index) => {
-    const weight =
-      getMatchWeight(index);
-
-    total += value * weight;
-    weights += weight;
+  values.forEach((v, i) => {
+    const x = weight(i);
+    sum += v * x;
+    w += x;
   });
 
-  return weights
-    ? total / weights
-    : 0;
+  return w ? sum / w : 0;
 }
 
-/* =========================
-   ANALYSE ÉQUIPE
-========================= */
+/* ÉQUIPE */
 
 function analyzeTeam(team) {
-  const all =
-    getTeamMatches(team) || [];
-
-  const recent =
-    recentMatches(all, 20);
+  const all = getTeamMatches(team) || [];
+  const ms = recent(all);
 
   const scored = [];
   const conceded = [];
+  const homeS = [], homeC = [];
+  const awayS = [], awayC = [];
 
-  const homeScored = [];
-  const homeConceded = [];
-
-  const awayScored = [];
-  const awayConceded = [];
-
-  let wins = 0;
   let points = 0;
+  let wins = 0;
 
-  recent.forEach(m => {
-    const isHome =
-      teamKey(m.home) ===
-      teamKey(team);
+  ms.forEach((m, i) => {
+    const home =
+      m.home.toLowerCase() === team.toLowerCase();
 
-    const gf = isHome
-      ? Number(m.homeGoals)
-      : Number(m.awayGoals);
-
-    const ga = isHome
-      ? Number(m.awayGoals)
-      : Number(m.homeGoals);
-
-    if (
-      !Number.isFinite(gf) ||
-      !Number.isFinite(ga)
-    ) {
-      return;
-    }
+    const gf = Number(home ? m.homeGoals : m.awayGoals);
+    const ga = Number(home ? m.awayGoals : m.homeGoals);
 
     scored.push(gf);
     conceded.push(ga);
 
-    if (isHome) {
-      homeScored.push(gf);
-      homeConceded.push(ga);
+    if (home) {
+      homeS.push(gf);
+      homeC.push(ga);
     } else {
-      awayScored.push(gf);
-      awayConceded.push(ga);
+      awayS.push(gf);
+      awayC.push(ga);
     }
 
     if (gf > ga) {
       wins++;
       points += 3;
     } else if (gf === ga) {
-      points += 1;
+      points++;
     }
   });
 
   return {
     team,
-
     matches: all.length,
+    recentMatches: ms.length,
 
-    recentMatches: recent.length,
+    avgScored: wavg(scored),
+    avgConceded: wavg(conceded),
 
-    avgScored:
-      weightedAverage(scored),
+    homeAvgScored: wavg(homeS),
+    homeAvgConceded: wavg(homeC),
 
-    avgConceded:
-      weightedAverage(conceded),
+    awayAvgScored: wavg(awayS),
+    awayAvgConceded: wavg(awayC),
 
-    homeAvgScored:
-      weightedAverage(homeScored),
-
-    homeAvgConceded:
-      weightedAverage(homeConceded),
-
-    awayAvgScored:
-      weightedAverage(awayScored),
-
-    awayAvgConceded:
-      weightedAverage(awayConceded),
-
-    winRate:
-      recent.length
-        ? wins / recent.length
-        : 0,
-
-    form:
-      recent.length
-        ? points /
-          (recent.length * 3)
-        : 0
+    winRate: ms.length ? wins / ms.length : 0,
+    form: ms.length ? points / (ms.length * 3) : 0
   };
 }
 
-/* =========================
-   H2H
-========================= */
+/* H2H */
 
 function analyzeH2H(home, away) {
-  const matches =
-    getHeadToHead(
-      home,
-      away
-    ) || [];
+  const ms = recent(
+    getHeadToHead(home, away) || [],
+    10
+  );
 
-  const recent =
-    recentMatches(matches, 5);
+  let hs = [], as = [];
+  let hw = 0, dr = 0, aw = 0;
 
-  let homeWins = 0;
-  let draws = 0;
-  let awayWins = 0;
+  ms.forEach(m => {
+    const original =
+      m.home.toLowerCase() === home.toLowerCase();
 
-  const homeGoals = [];
-  const awayGoals = [];
+    const h = Number(m.homeGoals);
+    const a = Number(m.awayGoals);
 
-  recent.forEach(m => {
-    const hg =
-      Number(m.homeGoals);
+    const hg = original ? h : a;
+    const ag = original ? a : h;
 
-    const ag =
-      Number(m.awayGoals);
+    hs.push(hg);
+    as.push(ag);
 
-    if (
-      !Number.isFinite(hg) ||
-      !Number.isFinite(ag)
-    ) {
-      return;
-    }
-
-    const originalHome =
-      teamKey(m.home) ===
-      teamKey(home);
-
-    if (originalHome) {
-      homeGoals.push(hg);
-      awayGoals.push(ag);
-
-      if (hg > ag) homeWins++;
-      else if (hg === ag) draws++;
-      else awayWins++;
-    } else {
-      homeGoals.push(ag);
-      awayGoals.push(hg);
-
-      if (ag > hg) homeWins++;
-      else if (ag === hg) draws++;
-      else awayWins++;
-    }
+    if (hg > ag) hw++;
+    else if (hg === ag) dr++;
+    else aw++;
   });
 
-  const total =
-    homeGoals.length;
+  const n = ms.length || 1;
 
   return {
-    matches: total,
-
-    homeAvgScored:
-      avg(homeGoals),
-
-    awayAvgScored:
-      avg(awayGoals),
-
-    homeWinRate:
-      total
-        ? homeWins / total
-        : 0,
-
-    drawRate:
-      total
-        ? draws / total
-        : 0,
-
-    awayWinRate:
-      total
-        ? awayWins / total
-        : 0
+    matches: ms.length,
+    homeAvgScored: avg(hs),
+    awayAvgScored: avg(as),
+    homeWinRate: hw / n * 100,
+    drawRate: dr / n * 100,
+    awayWinRate: aw / n * 100
   };
 }
 
-/* =========================
-   BUTS ATTENDUS
-========================= */
+/* BUTS ATTENDUS */
 
-function calculateExpectedGoals(
-  homeStats,
-  awayStats,
-  h2h
-) {
-  let homeAttack =
-    homeStats.homeAvgScored ||
-    homeStats.avgScored ||
-    1.25;
+function expectedGoals(home, away, h2h) {
+  const ha = home.homeAvgScored || home.avgScored || 1.2;
+  const hd = home.homeAvgConceded || home.avgConceded || 1.2;
 
-  let homeDefense =
-    homeStats.homeAvgConceded ||
-    homeStats.avgConceded ||
-    1.25;
+  const aa = away.awayAvgScored || away.avgScored || 1.2;
+  const ad = away.awayAvgConceded || away.avgConceded || 1.2;
 
-  let awayAttack =
-    awayStats.awayAvgScored ||
-    awayStats.avgScored ||
-    1.25;
-
-  let awayDefense =
-    awayStats.awayAvgConceded ||
-    awayStats.avgConceded ||
-    1.25;
-
-  /*
-   * Mélange attaque/défense.
-   */
-
-  let homeXG =
-    homeAttack * 0.60 +
-    awayDefense * 0.40;
-
-  let awayXG =
-    awayAttack * 0.60 +
-    homeDefense * 0.40;
-
-  /*
-   * H2H très faible influence.
-   */
+  let hxg = ha * 0.55 + ad * 0.45;
+  let axg = aa * 0.55 + hd * 0.45;
 
   if (h2h.matches >= 2) {
-    homeXG =
-      homeXG * 0.90 +
-      h2h.homeAvgScored * 0.10;
-
-    awayXG =
-      awayXG * 0.90 +
-      h2h.awayAvgScored * 0.10;
+    hxg = hxg * 0.9 + h2h.homeAvgScored * 0.1;
+    axg = axg * 0.9 + h2h.awayAvgScored * 0.1;
   }
 
   return {
-    home: Number(
-      clamp(
-        homeXG,
-        0.30,
-        3.50
-      ).toFixed(2)
-    ),
-
-    away: Number(
-      clamp(
-        awayXG,
-        0.30,
-        3.50
-      ).toFixed(2)
-    )
+    home: +clamp(hxg, 0.2, 4).toFixed(2),
+    away: +clamp(axg, 0.2, 4).toFixed(2)
   };
 }
 
-/* =========================
-   POISSON
-========================= */
+/* POISSON */
 
 function factorial(n) {
-  let result = 1;
-
-  for (let i = 2; i <= n; i++) {
-    result *= i;
-  }
-
-  return result;
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
 }
 
 function poisson(lambda, k) {
-  return (
-    Math.exp(-lambda) *
+  return Math.exp(-lambda) *
     Math.pow(lambda, k) /
-    factorial(k)
-  );
+    factorial(k);
 }
 
-/* =========================
-   MATRICE
-========================= */
+/* DIXON-COLES */
 
-function buildMatrix(
-  homeXG,
-  awayXG
-) {
+function dcCorrection(h, a, hxg, axg) {
+  const rho = -0.10;
+
+  if (h === 0 && a === 0)
+    return 1 - hxg * axg * rho;
+
+  if (h === 1 && a === 0)
+    return 1 + axg * rho;
+
+  if (h === 0 && a === 1)
+    return 1 + hxg * rho;
+
+  if (h === 1 && a === 1)
+    return 1 - rho;
+
+  return 1;
+}
+
+/* MATRICE */
+
+function buildMatrix(hxg, axg) {
   const matrix = [];
 
   for (let h = 0; h <= 8; h++) {
     for (let a = 0; a <= 8; a++) {
+      const p =
+        poisson(hxg, h) *
+        poisson(axg, a) *
+        dcCorrection(h, a, hxg, axg);
+
       matrix.push({
         homeGoals: h,
         awayGoals: a,
-
-        probability:
-          poisson(homeXG, h) *
-          poisson(awayXG, a)
+        probability: Math.max(0, p)
       });
     }
   }
 
-  const total =
-    matrix.reduce(
-      (sum, item) =>
-        sum + item.probability,
-      0
-    );
+  const total = matrix.reduce(
+    (s, x) => s + x.probability,
+    0
+  );
 
-  return matrix.map(item => ({
-    ...item,
-
-    probability:
-      total
-        ? item.probability / total
-        : 0
+  return matrix.map(x => ({
+    ...x,
+    probability: x.probability / total
   }));
 }
 
-/* =========================
-   MARCHÉS
-========================= */
+/* MARCHÉS */
 
 function calculateMarkets(matrix) {
-  const result = {
+  const r = {
     homeWin: 0,
     draw: 0,
     awayWin: 0,
@@ -410,372 +239,165 @@ function calculateMarkets(matrix) {
     bttsNo: 0
   };
 
-  matrix.forEach(item => {
-    const h =
-      item.homeGoals;
+  matrix.forEach(x => {
+    const h = x.homeGoals;
+    const a = x.awayGoals;
+    const p = x.probability;
 
-    const a =
-      item.awayGoals;
+    if (h > a) r.homeWin += p;
+    else if (h === a) r.draw += p;
+    else r.awayWin += p;
 
-    const p =
-      item.probability;
+    if (h + a > 2) r.over25 += p;
+    else r.under25 += p;
 
-    if (h > a)
-      result.homeWin += p;
-    else if (h === a)
-      result.draw += p;
-    else
-      result.awayWin += p;
-
-    if (h + a >= 3)
-      result.over25 += p;
-    else
-      result.under25 += p;
-
-    if (h > 0 && a > 0)
-      result.bttsYes += p;
-    else
-      result.bttsNo += p;
+    if (h > 0 && a > 0) r.bttsYes += p;
+    else r.bttsNo += p;
   });
 
-  /*
-   * Sécurise les marchés.
-   */
-
-  const total =
-    result.homeWin +
-    result.draw +
-    result.awayWin;
-
-  if (total > 0) {
-    result.homeWin /= total;
-    result.draw /= total;
-    result.awayWin /= total;
-  }
-
-  const goalsTotal =
-    result.over25 +
-    result.under25;
-
-  if (goalsTotal > 0) {
-    result.over25 /= goalsTotal;
-    result.under25 /= goalsTotal;
-  }
-
-  const bttsTotal =
-    result.bttsYes +
-    result.bttsNo;
-
-  if (bttsTotal > 0) {
-    result.bttsYes /= bttsTotal;
-    result.bttsNo /= bttsTotal;
-  }
-
-  return result;
+  return r;
 }
 
-/* =========================
-   SCORES
-========================= */
+/* TOP SCORES */
 
-function getTopScores(
-  matrix,
-  limit = 5
-) {
+function getTopScores(matrix) {
   return [...matrix]
-    .sort(
-      (a, b) =>
-        b.probability -
-        a.probability
-    )
-    .slice(0, limit);
+    .sort((a, b) => b.probability - a.probability)
+    .slice(0, 5);
 }
 
-/* =========================
-   CONFIANCE
-========================= */
+/* CONFIANCE */
 
-function calculateConfidence(
-  homeStats,
-  awayStats,
-  markets
-) {
-  const dataCount =
+function confidence(home, away, markets) {
+  const gap = Math.abs(
+    markets.homeWin - markets.awayWin
+  );
+
+  const data =
     Math.min(
-      homeStats.recentMatches +
-      awayStats.recentMatches,
-      40
+      100,
+      (home.recentMatches + away.recentMatches) / 40 * 100
     );
 
-  const dataFactor =
-    dataCount / 40;
-
-  const probabilities = [
-    markets.homeWin,
-    markets.draw,
-    markets.awayWin
-  ].sort((a, b) => b - a);
-
-  const strongest =
-    probabilities[0];
-
-  const second =
-    probabilities[1];
-
-  const gap =
-    strongest - second;
-
-  let base;
-
-  if (gap < 0.03)
-    base = 32;
-  else if (gap < 0.06)
-    base = 38;
-  else if (gap < 0.10)
-    base = 45;
-  else if (gap < 0.15)
-    base = 53;
-  else if (gap < 0.22)
-    base = 63;
-  else
-    base = 72;
-
-  const dataBonus =
-    dataFactor * 8;
+  let base =
+    gap < 0.05 ? 30 :
+    gap < 0.10 ? 35 :
+    gap < 0.20 ? 45 :
+    gap < 0.30 ? 58 : 70;
 
   return Math.round(
-    clamp(
-      base + dataBonus,
-      25,
-      80
-    )
+    clamp(base + data * 0.10, 25, 75)
   );
 }
 
-/* =========================
-   RISQUE
-========================= */
+/* PREDICTION */
 
-function getRisk(confidence) {
-  if (confidence < 40)
-    return "Très élevé";
+function predictMatch(homeName, awayName) {
+  const home = analyzeTeam(homeName);
+  const away = analyzeTeam(awayName);
 
-  if (confidence < 50)
-    return "Élevé";
+  const h2h = analyzeH2H(
+    homeName,
+    awayName
+  );
 
-  if (confidence < 65)
-    return "Moyen";
+  const xg = expectedGoals(
+    home,
+    away,
+    h2h
+  );
 
-  if (confidence < 75)
-    return "Faible";
+  const matrix = buildMatrix(
+    xg.home,
+    xg.away
+  );
 
-  return "Très faible";
-}
+  const markets = calculateMarkets(matrix);
+  const scores = getTopScores(matrix);
 
-/* =========================
-   PREDICTION
-========================= */
-
-function predictMatch(
-  home,
-  away
-) {
-  const homeStats =
-    analyzeTeam(home);
-
-  const awayStats =
-    analyzeTeam(away);
-
-  const h2h =
-    analyzeH2H(
-      home,
-      away
-    );
-
-  const expectedGoals =
-    calculateExpectedGoals(
-      homeStats,
-      awayStats,
-      h2h
-    );
-
-  const matrix =
-    buildMatrix(
-      expectedGoals.home,
-      expectedGoals.away
-    );
-
-  const markets =
-    calculateMarkets(matrix);
-
-  const topScores =
-    getTopScores(
-      matrix,
-      5
-    );
-
-  let winner;
+  let winner = "Nul";
 
   if (
-    markets.draw >=
-      markets.homeWin &&
-    markets.draw >=
-      markets.awayWin
+    markets.homeWin > markets.awayWin &&
+    markets.homeWin > markets.draw
   ) {
-    winner = "Nul";
+    winner = homeName;
   } else if (
-    markets.homeWin >=
-    markets.awayWin
+    markets.awayWin > markets.homeWin &&
+    markets.awayWin > markets.draw
   ) {
-    winner = home;
-  } else {
-    winner = away;
+    winner = awayName;
   }
 
-  const confidence =
-    calculateConfidence(
-      homeStats,
-      awayStats,
-      markets
-    );
+  const conf = confidence(
+    home,
+    away,
+    markets
+  );
 
-  const risk =
-    getRisk(confidence);
+  const gap = Math.abs(
+    markets.homeWin - markets.awayWin
+  );
 
-  const gap =
-    Math.abs(
-      markets.homeWin -
-      markets.awayWin
-    );
+  const message =
+    gap < 0.05
+      ? "Match très serré"
+      : gap < 0.10
+        ? "Match serré"
+        : winner === "Nul"
+          ? "Nul possible"
+          : "";
 
-  let message;
-
-  if (gap < 0.03) {
-    message =
-      "Match extrêmement serré";
-  } else if (gap < 0.07) {
-    message =
-      "Match très serré";
-  } else if (gap < 0.12) {
-    message =
-      "Match serré";
-  } else if (winner === "Nul") {
-    message =
-      "Le nul est fortement possible";
-  } else {
-    message =
-      "Avantage statistique";
-  }
-
-  /*
-   * Qualité des données :
-   * uniquement les matchs récents
-   * réellement exploitables.
-   */
-
-  const usable =
-    homeStats.recentMatches +
-    awayStats.recentMatches;
-
-  const dataQuality =
-    Math.round(
-      clamp(
-        usable / 40 * 100,
-        0,
-        100
-      )
-    );
-
-  const mainScore =
-    topScores[0] || null;
+  const dataQuality = Math.round(
+    (Math.min(home.recentMatches, 20) +
+      Math.min(away.recentMatches, 20)) / 40 * 100
+  );
 
   return {
     match: {
-      home,
-      away
+      home: homeName,
+      away: awayName
     },
 
     teams: {
-      home: homeStats,
-      away: awayStats
+      home,
+      away
     },
 
     h2h,
 
-    expectedGoals,
+    expectedGoals: xg,
 
     predictions: {
       winner,
-
-      confidence,
-
+      confidence: conf,
       message,
 
-      risk,
+      homeWin: +(markets.homeWin * 100).toFixed(1),
+      draw: +(markets.draw * 100).toFixed(1),
+      awayWin: +(markets.awayWin * 100).toFixed(1),
 
-      homeWin:
-        +(markets.homeWin * 100)
-          .toFixed(1),
+      over25: +(markets.over25 * 100).toFixed(1),
+      under25: +(markets.under25 * 100).toFixed(1),
 
-      draw:
-        +(markets.draw * 100)
-          .toFixed(1),
-
-      awayWin:
-        +(markets.awayWin * 100)
-          .toFixed(1),
-
-      over25:
-        +(markets.over25 * 100)
-          .toFixed(1),
-
-      under25:
-        +(markets.under25 * 100)
-          .toFixed(1),
-
-      bttsYes:
-        +(markets.bttsYes * 100)
-          .toFixed(1),
-
-      bttsNo:
-        +(markets.bttsNo * 100)
-          .toFixed(1),
-
-      mainScore:
-        mainScore
-          ? `${mainScore.homeGoals}-${mainScore.awayGoals}`
-          : null,
-
-      mainScoreProbability:
-        mainScore
-          ? +(mainScore.probability * 100)
-              .toFixed(1)
-          : 0,
+      bttsYes: +(markets.bttsYes * 100).toFixed(1),
+      bttsNo: +(markets.bttsNo * 100).toFixed(1),
 
       dataQuality
     },
 
-    topScores:
-      topScores.map(item => ({
-        score:
-          `${item.homeGoals}-${item.awayGoals}`,
-
-        probability:
-          +(item.probability * 100)
-            .toFixed(1)
-      }))
+    topScores: scores.map(s => ({
+      score: `${s.homeGoals}-${s.awayGoals}`,
+      probability: +(s.probability * 100).toFixed(1)
+    }))
   };
 }
-
-/* =========================
-   EXPORT
-========================= */
 
 module.exports = {
   predictMatch,
   analyzeTeam,
   analyzeH2H,
-  calculateExpectedGoals,
+  expectedGoals,
   calculateMarkets,
   buildMatrix,
   getTopScores
