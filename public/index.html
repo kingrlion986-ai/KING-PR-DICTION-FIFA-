@@ -236,10 +236,10 @@ function show(x){
  $("quality").textContent=(q.dataQuality??0)+"%";
 
  const z=x.h2h||{};
- $("h2h").textContent=z.matches||0;
- $("h2hh").textContent=p(z.homeWinRate||0);
- $("h2hd").textContent=p(z.drawRate||0);
- $("h2ha").textContent=p(z.awayWinRate||0);
+$("h2h").textContent=z.matches||0;
+$("h2hh").textContent=p((z.homeWinRate||0)*100);
+$("h2hd").textContent=p((z.drawRate||0)*100);
+$("h2ha").textContent=p((z.awayWinRate||0)*100);
 
  $("scores").innerHTML=(x.topScores||[]).map(s=>
   `<div class="box score"><b>${s.score}</b><span>${p(s.probability)}</span></div>`
