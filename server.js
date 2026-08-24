@@ -93,11 +93,12 @@ app.get("/api/predict", (req, res) => {
       });
     }
 
-    const asOf = req.query.date || null;
+    const date = String(req.query.date || "").trim();
+const time = String(req.query.time || "").trim();
 
 const prediction =
-  predictMatch(home, away, asOf);
-
+  predictMatch(home, away, date, time);
+    
     res.json({
       success: true,
       prediction
