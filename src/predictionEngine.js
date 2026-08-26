@@ -1,311 +1,448 @@
-const { getTeamMatches, getHeadToHead } = require("./dataEngine");
+const { analyzeTeam } = require("./teamAnalyzer");
+const {
+  getHeadToHead
+} = require("./dataEngine");
 
-function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+const {
+  buildPoissonMatrix,
+  getTopScores
+} = require("./poissonEngine");
 
-function recent(matches,limit=20,matchDate=null){
-  let r=(matches||[]).filter(m=>m&&m.date);
+const {
+  calculateExpectedGoals
+} = require("./expectedGoals");
 
-  if(matchDate){
-    const d=new Date(matchDate);
-    if(!isNaN(d))
-      r=r.filter(m=>new Date(m.date)<d);
+const {
+  calculateConfidence
+} = require("./confidenceEngine");
+
+const {
+  calculateDataQuality
+} = require("./qualityEngine");
+
+
+function round(value, decimals = 2) {
+  return Number(Number(value || 0).toFixed(decimals));
+}
+
+
+/*
+ * Signal de solidité de l'analyse.
+ *
+ * Ce signal indique uniquement la qualité/convergence
+ * des données utilisées par le modèle.
+ */
+function getSignal(confidence, dataQuality) {
+
+  if (
+    dataQuality < 50 ||
+    confidence < 45
+  ) {
+    return {
+      level: "FAIBLE",
+      color: "red",
+      icon: "🔴"
+    };
   }
 
-  return r.sort((a,b)=>new Date(b.date)-new Date(a.date))
-          .slice(0,limit);
-}
-
-function avg(a){
-  return a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
-}
-
-function wavg(a){
-  if(!a.length)return 0;
-  let s=0,w=0;
-  a.forEach((v,i)=>{
-    const q=Math.max(.35,1-i*.06);
-    s+=v*q;w+=q;
-  });
-  return s/w;
-}
-
-/* =========================
-   ÉQUIPE
-========================= */
-
-function analyzeTeam(team,matchDate=null){
-  const all=getTeamMatches(team)||[];
-  const r=recent(all,20,matchDate);
-
-  let scored=[],conceded=[],hs=[],hc=[],as=[],ac=[];
-  let wins=0,points=0;
-
-  r.forEach(m=>{
-    const home=m.home.toLowerCase()===team.toLowerCase();
-    const gf=Number(home?m.homeGoals:m.awayGoals);
-    const ga=Number(home?m.awayGoals:m.homeGoals);
-
-    scored.push(gf);conceded.push(ga);
-
-    if(home){hs.push(gf);hc.push(ga);}
-    else{as.push(gf);ac.push(ga);}
-
-    if(gf>ga){wins++;points+=3;}
-    else if(gf===ga)points++;
-  });
-
-  return {
-    team,
-    matches:r.length,
-    avgScored:wavg(scored),
-    avgConceded:wavg(conceded),
-    homeAvgScored:wavg(hs),
-    homeAvgConceded:wavg(hc),
-    awayAvgScored:wavg(as),
-    awayAvgConceded:wavg(ac),
-    winRate:r.length?wins/r.length:0,
-    form:r.length?points/(r.length*3):0,
-    recentMatches:r.length
-  };
-}
-
-/* =========================
-   H2H
-========================= */
-
-function analyzeH2H(home,away,matchDate=null){
-  const r=recent(getHeadToHead(home,away)||[],10,matchDate);
-
-  let hg=[],ag=[],hw=0,d=0,aw=0;
-
-  r.forEach(m=>{
-    const same=m.home.toLowerCase()===home.toLowerCase();
-    const h=Number(same?m.homeGoals:m.awayGoals);
-    const a=Number(same?m.awayGoals:m.homeGoals);
-
-    hg.push(h);ag.push(a);
-
-    if(h>a)hw++;
-    else if(h===a)d++;
-    else aw++;
-  });
-
-  return {
-    matches:r.length,
-    homeAvgScored:avg(hg),
-    awayAvgScored:avg(ag),
-    homeWinRate:r.length?hw/r.length:0,
-    drawRate:r.length?d/r.length:0,
-    awayWinRate:r.length?aw/r.length:0
-  };
-}
-
-/* =========================
-   BUTS ATTENDUS
-========================= */
-
-function expectedGoals(h,a,h2h){
-  const ha=h.homeAvgScored||h.avgScored||1.25;
-  const hd=h.homeAvgConceded||h.avgConceded||1.25;
-  const aa=a.awayAvgScored||a.avgScored||1.25;
-  const ad=a.awayAvgConceded||a.avgConceded||1.25;
-
-  let home=ha*.55+ad*.45;
-  let away=aa*.55+hd*.45;
-
-  /* Un seul H2H ne doit presque rien changer */
-  if(h2h.matches>=3){
-    home=home*.9+h2h.homeAvgScored*.1;
-    away=away*.9+h2h.awayAvgScored*.1;
+  if (
+    dataQuality >= 80 &&
+    confidence >= 65
+  ) {
+    return {
+      level: "FORT",
+      color: "green",
+      icon: "🟢"
+    };
   }
 
   return {
-    home:+clamp(home,.2,4).toFixed(2),
-    away:+clamp(away,.2,4).toFixed(2)
+    level: "MOYEN",
+    color: "orange",
+    icon: "🟠"
   };
 }
 
-/* =========================
-   POISSON
-========================= */
 
-function factorial(n){
-  let r=1;
-  for(let i=2;i<=n;i++)r*=i;
-  return r;
-}
+/*
+ * Calcule le résultat principal.
+ *
+ * Important :
+ * on conserve les calculs existants et on ajoute
+ * seulement le système de signal.
+ */
+function predictMatch(homeTeam, awayTeam) {
 
-function poisson(l,k){
-  return Math.exp(-l)*Math.pow(l,k)/factorial(k);
-}
+  if (!homeTeam || !awayTeam) {
+    throw new Error(
+      "Les deux équipes sont obligatoires."
+    );
+  }
 
-function buildMatrix(lh,la){
-  const m=[];
+  const home =
+    String(homeTeam).trim();
 
-  for(let h=0;h<=8;h++){
-    for(let a=0;a<=8;a++){
-      m.push({
-        homeGoals:h,
-        awayGoals:a,
-        probability:poisson(lh,h)*poisson(la,a)
-      });
+  const away =
+    String(awayTeam).trim();
+
+
+  if (!home || !away) {
+    throw new Error(
+      "Les noms des équipes sont invalides."
+    );
+  }
+
+
+  if (
+    home.toLowerCase() ===
+    away.toLowerCase()
+  ) {
+    throw new Error(
+      "Les deux équipes doivent être différentes."
+    );
+  }
+
+
+  /*
+   * Analyse des équipes
+   */
+
+  const homeStats =
+    analyzeTeam(home);
+
+  const awayStats =
+    analyzeTeam(away);
+
+
+  if (!homeStats || !awayStats) {
+    throw new Error(
+      "Impossible d'analyser les équipes."
+    );
+  }
+
+
+  /*
+   * H2H
+   */
+
+  const h2hMatches =
+    getHeadToHead(home, away) || [];
+
+
+  /*
+   * Qualité des données
+   */
+
+  const dataQuality =
+    calculateDataQuality(
+      homeStats.matches || 0,
+      awayStats.matches || 0
+    );
+
+
+  /*
+   * Buts attendus
+   */
+
+  const expectedGoals =
+    calculateExpectedGoals(
+      homeStats,
+      awayStats
+    );
+
+
+  const homeXG =
+    round(expectedGoals.home);
+
+  const awayXG =
+    round(expectedGoals.away);
+
+
+  /*
+   * Matrice de Poisson
+   */
+
+  const matrix =
+    buildPoissonMatrix(
+      homeXG,
+      awayXG
+    );
+
+
+  /*
+   * Scores les plus probables
+   */
+
+  const topScores =
+    getTopScores(matrix, 3);
+
+
+  /*
+   * Probabilités 1X2
+   *
+   * On calcule directement depuis la matrice
+   * afin de garder une logique simple.
+   */
+
+  let homeWin = 0;
+  let draw = 0;
+  let awayWin = 0;
+
+
+  for (let h = 0; h < matrix.length; h++) {
+
+    for (let a = 0; a < matrix[h].length; a++) {
+
+      const probability =
+        Number(matrix[h][a]) || 0;
+
+
+      if (h > a) {
+        homeWin += probability;
+      }
+
+      else if (h === a) {
+        draw += probability;
+      }
+
+      else {
+        awayWin += probability;
+      }
     }
   }
 
-  const total=m.reduce((s,x)=>s+x.probability,0);
 
-  return m.map(x=>({
-    ...x,
-    probability:x.probability/total
-  }));
-}
+  /*
+   * Conversion en pourcentage
+   */
 
-/* =========================
-   MARCHÉS
-========================= */
+  homeWin =
+    round(homeWin * 100, 1);
 
-function calculateMarkets(m){
-  const r={
-    homeWin:0,draw:0,awayWin:0,
-    over25:0,under25:0,
-    bttsYes:0,bttsNo:0
+  draw =
+    round(draw * 100, 1);
+
+  awayWin =
+    round(awayWin * 100, 1);
+
+
+  /*
+   * Normalisation
+   */
+
+  const total =
+    homeWin +
+    draw +
+    awayWin;
+
+
+  if (total > 0) {
+
+    homeWin =
+      round(homeWin / total * 100, 1);
+
+    draw =
+      round(draw / total * 100, 1);
+
+    awayWin =
+      round(
+        100 - homeWin - draw,
+        1
+      );
+  }
+
+
+  /*
+   * Détermination de la tendance principale
+   */
+
+  let winner;
+
+  if (
+    homeWin >= draw &&
+    homeWin >= awayWin
+  ) {
+    winner = home;
+  }
+
+  else if (
+    awayWin >= homeWin &&
+    awayWin >= draw
+  ) {
+    winner = away;
+  }
+
+  else {
+    winner = "Match nul";
+  }
+
+
+  /*
+   * Confiance
+   */
+
+  const confidence =
+    calculateConfidence(
+      homeWin / 100,
+      draw / 100,
+      awayWin / 100
+    );
+
+
+  /*
+   * Signal
+   */
+
+  const signal =
+    getSignal(
+      confidence,
+      dataQuality
+    );
+
+
+  /*
+   * H2H simplifié
+   */
+
+  let h2h = {
+    matches: 0,
+    homeWinRate: 0,
+    drawRate: 0,
+    awayWinRate: 0
   };
 
-  m.forEach(x=>{
-    const h=x.homeGoals,a=x.awayGoals,p=x.probability;
 
-    if(h>a)r.homeWin+=p;
-    else if(h===a)r.draw+=p;
-    else r.awayWin+=p;
+  if (h2hMatches.length > 0) {
 
-    if(h+a>=3)r.over25+=p;
-    else r.under25+=p;
+    let hw = 0;
+    let dr = 0;
+    let aw = 0;
 
-    if(h>0&&a>0)r.bttsYes+=p;
-    else r.bttsNo+=p;
-  });
 
-  return r;
-}
+    for (const match of h2hMatches) {
 
-function getTopScores(m){
-  return [...m]
-    .sort((a,b)=>b.probability-a.probability)
-    .slice(0,5)
-    .map(x=>({
-      score:`${x.homeGoals}-${x.awayGoals}`,
-      probability:+(x.probability*100).toFixed(1)
-    }));
-}
+      const hg =
+        Number(match.homeGoals);
 
-/* =========================
-   CONFIANCE
-========================= */
+      const ag =
+        Number(match.awayGoals);
 
-function getConfidence(h,a,m){
-  const p=[
-    m.homeWin,
-    m.draw,
-    m.awayWin
-  ].sort((x,y)=>y-x);
 
-  const separation=p[0]-p[1];
-  const data=clamp((h.matches+a.matches)/40,0,1);
+      if (
+        !Number.isFinite(hg) ||
+        !Number.isFinite(ag)
+      ) {
+        continue;
+      }
 
-  return Math.round(
-    clamp(30+separation*100+data*10,25,75)
-  );
-}
 
-/* =========================
-   PREDICTION
-========================= */
+      if (hg > ag) {
+        hw++;
+      }
 
-function predictMatch(home,away,date=null,time=null){
+      else if (hg === ag) {
+        dr++;
+      }
 
-  const matchDate=
-    date
-      ? `${date}T${time||"23:59"}:00`
-      : null;
+      else {
+        aw++;
+      }
+    }
 
-  const hs=analyzeTeam(home,matchDate);
-  const as=analyzeTeam(away,matchDate);
-  const h2h=analyzeH2H(home,away,matchDate);
 
-  const xg=expectedGoals(hs,as,h2h);
-  const matrix=buildMatrix(xg.home,xg.away);
-  const markets=calculateMarkets(matrix);
-  const topScores=getTopScores(matrix);
+    const count =
+      hw + dr + aw;
 
-  let winner="Nul";
 
-  if(markets.homeWin>markets.draw &&
-     markets.homeWin>markets.awayWin)
-    winner=home;
+    if (count > 0) {
 
-  else if(markets.awayWin>markets.draw &&
-          markets.awayWin>markets.homeWin)
-    winner=away;
+      h2h = {
+        matches: count,
 
-  const confidence=getConfidence(hs,as,markets);
+        homeWinRate:
+          round(hw / count * 100, 1),
 
-  const gap=Math.abs(
-    markets.homeWin-markets.awayWin
-  );
+        drawRate:
+          round(dr / count * 100, 1),
 
-  let message="";
+        awayWinRate:
+          round(aw / count * 100, 1)
+      };
+    }
+  }
 
-  if(gap<.05)
-    message="Match très serré";
-  else if(gap<.10)
-    message="Match serré";
-  else if(winner==="Nul")
-    message="Nul fortement possible";
 
-  const quality=Math.round(
-    clamp((hs.matches+as.matches)/40*100,0,100)
-  );
+  /*
+   * Résultat final
+   */
 
   return {
-    match:{home,away,date,time},
 
-    teams:{
-      home:hs,
-      away:as
+    match: {
+      home,
+      away
     },
+
+
+    teams: {
+      home: homeStats,
+      away: awayStats
+    },
+
 
     h2h,
 
-    expectedGoals:xg,
 
-    predictions:{
-      winner,
-      confidence,
-      message,
-
-      homeWin:+(markets.homeWin*100).toFixed(1),
-      draw:+(markets.draw*100).toFixed(1),
-      awayWin:+(markets.awayWin*100).toFixed(1),
-
-      over25:+(markets.over25*100).toFixed(1),
-      under25:+(markets.under25*100).toFixed(1),
-
-      bttsYes:+(markets.bttsYes*100).toFixed(1),
-      bttsNo:+(markets.bttsNo*100).toFixed(1),
-
-      dataQuality:quality
+    expectedGoals: {
+      home: homeXG,
+      away: awayXG
     },
 
+
+    predictions: {
+
+      /*
+       * Tendance principale
+       */
+      winner,
+
+      /*
+       * Probabilités conservées pour
+       * le fonctionnement interne/API.
+       */
+      homeWin,
+      draw,
+      awayWin,
+
+      /*
+       * Qualité
+       */
+      dataQuality,
+
+      /*
+       * Confiance
+       */
+      confidence,
+
+      /*
+       * Nouveau signal
+       */
+      signal: signal.level,
+      signalColor: signal.color,
+      signalIcon: signal.icon
+    },
+
+
+    /*
+     * Conservé pour l'analyse,
+     * mais l'interface ne l'affiche plus.
+     */
     topScores
   };
 }
 
-module.exports={
+
+module.exports = {
   predictMatch,
-  analyzeTeam,
-  analyzeH2H,
-  expectedGoals,
-  buildMatrix,
-  calculateMarkets,
-  getTopScores
+  getSignal
 };
