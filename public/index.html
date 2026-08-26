@@ -1,818 +1,545 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <title>ROI PREDICTION FIFA</title>
 
 <style>
-
-*{
-  box-sizing:border-box;
-}
+*{box-sizing:border-box}
 
 body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  color:#fff;
-  min-height:100vh;
-  background:
-    radial-gradient(
-      circle at top,
-      #164b80,
-      #071321 45%,
-      #02050a
-    );
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:
+ radial-gradient(circle at top,#172554,#020617 65%);
+ color:#fff;
+ min-height:100vh;
 }
 
 .container{
-  width:min(100% - 24px,760px);
-  margin:auto;
-  padding:25px 0 50px;
+ width:min(94%,650px);
+ margin:auto;
+ padding:35px 0 60px;
 }
 
-header{
-  text-align:center;
-  margin-bottom:20px;
-}
+.header{text-align:center;margin-bottom:25px}
 
 .logo{
-  font-size:30px;
-  font-weight:900;
+ font-size:32px;
+ font-weight:900;
+ letter-spacing:1px;
 }
 
-.logo span{
-  color:#18dfff;
-}
-
-.subtitle{
-  color:#91a7bf;
-  margin-top:6px;
+.sub{
+ color:#94a3b8;
+ margin-top:7px;
 }
 
 .card{
-  background:rgba(12,28,49,.94);
-  border:1px solid #245077;
-  border-radius:18px;
-  padding:20px;
-  margin-bottom:14px;
-  box-shadow:0 10px 35px #0006;
-}
-
-.teams{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
+ background:rgba(15,23,42,.88);
+ border:1px solid #334155;
+ border-radius:18px;
+ padding:20px;
+ margin-bottom:16px;
+ box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
 
 label{
-  display:block;
-  color:#72ddff;
-  font-size:13px;
-  font-weight:bold;
-  margin-bottom:7px;
+ display:block;
+ font-weight:bold;
+ margin-bottom:7px;
+ color:#cbd5e1;
 }
 
 input{
-  width:100%;
-  padding:14px;
-  border-radius:10px;
-  border:1px solid #345878;
-  background:#06101d;
-  color:white;
-  font-size:16px;
-  outline:none;
+ width:100%;
+ padding:14px;
+ margin-bottom:14px;
+ border-radius:10px;
+ border:1px solid #475569;
+ background:#020617;
+ color:white;
+ font-size:16px;
+ outline:none;
 }
 
-input:focus{
-  border-color:#18dfff;
-}
+input:focus{border-color:#38bdf8}
 
 button{
-  width:100%;
-  margin-top:14px;
-  padding:15px;
-  border:0;
-  border-radius:11px;
-  color:white;
-  font-size:16px;
-  font-weight:bold;
-  background:
-    linear-gradient(
-      90deg,
-      #087cff,
-      #00d9ff
-    );
-  cursor:pointer;
+ width:100%;
+ padding:15px;
+ border:0;
+ border-radius:11px;
+ background:linear-gradient(90deg,#2563eb,#06b6d4);
+ color:white;
+ font-size:17px;
+ font-weight:bold;
+ cursor:pointer;
 }
 
 button:disabled{
-  opacity:.5;
+ opacity:.6;
+ cursor:wait;
 }
 
-.date-time{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin-top:14px;
-}
+.hidden{display:none}
 
-.hidden{
-  display:none;
-}
-
-.error{
-  background:#681d2b;
-  color:#ffd7df;
-  padding:13px;
-  border-radius:10px;
-  margin-bottom:14px;
+.match{
+ text-align:center;
+ font-size:22px;
+ font-weight:bold;
 }
 
 .loading{
-  text-align:center;
-  color:#9db2c9;
+ text-align:center;
+ color:#38bdf8;
 }
 
-.match{
-  text-align:center;
+.error{
+ background:#7f1d1d;
+ color:#fecaca;
+ padding:14px;
+ border-radius:10px;
+ margin-bottom:16px;
 }
 
-.match-label{
-  color:#18dfff;
-  font-size:12px;
-  font-weight:bold;
+.bet{
+ text-align:center;
+ border:2px solid #22c55e;
+ background:rgba(34,197,94,.08);
 }
 
-.match-name{
-  font-size:24px;
-  font-weight:900;
-  margin:8px 0;
+.bet.orange{
+ border-color:#f59e0b;
+ background:rgba(245,158,11,.08);
 }
 
-.match-date{
-  color:#91a7bf;
+.bet.red{
+ border-color:#ef4444;
+ background:rgba(239,68,68,.08);
 }
 
 .signal{
-  text-align:center;
-  padding:25px;
+ font-size:38px;
+ font-weight:900;
+ margin:5px 0;
 }
 
-.signal-title{
-  color:#91a7bf;
-  font-size:13px;
-  font-weight:bold;
+.bet-name{
+ font-size:25px;
+ font-weight:bold;
+ margin:12px 0;
 }
 
-.signal-icon{
-  font-size:55px;
-  margin:8px;
+.conf{
+ font-size:18px;
+ color:#cbd5e1;
 }
 
-.signal-level{
-  font-size:28px;
-  font-weight:900;
+.grid{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:12px;
 }
 
-.signal.green{
-  border-color:#20d47a;
-  box-shadow:0 0 25px #20d47a22;
+.stat{
+ background:#020617;
+ border-radius:12px;
+ padding:15px;
 }
 
-.signal.orange{
-  border-color:#ff9f1c;
-  box-shadow:0 0 25px #ff9f1c22;
+.stat small{
+ display:block;
+ color:#94a3b8;
+ margin-bottom:6px;
 }
 
-.signal.red{
-  border-color:#ff4055;
-  box-shadow:0 0 25px #ff405522;
+.stat strong{
+ font-size:20px;
 }
 
-.tendency{
-  text-align:center;
+.scores{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:10px;
 }
 
-.tendency-label{
-  color:#91a7bf;
-  font-size:13px;
+.score{
+ text-align:center;
+ background:#020617;
+ padding:14px 5px;
+ border-radius:10px;
 }
 
-.tendency-name{
-  color:#18dfff;
-  font-size:30px;
-  font-weight:900;
-  margin:10px 0;
+.score b{
+ font-size:23px;
+ display:block;
 }
 
-.confidence{
-  font-size:18px;
-  font-weight:bold;
+.score span{
+ color:#94a3b8;
 }
 
-.info{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
+h2{
+ margin-top:0;
+ font-size:19px;
 }
 
-.info-box{
-  background:#06101d;
-  border-radius:11px;
-  padding:15px;
-  text-align:center;
+@media(max-width:500px){
+ .grid{grid-template-columns:1fr}
+ .logo{font-size:26px}
+ .bet-name{font-size:21px}
 }
-
-.info-box small{
-  display:block;
-  color:#91a7bf;
-  margin-bottom:5px;
-}
-
-.info-box strong{
-  font-size:20px;
-}
-
-.note{
-  text-align:center;
-  color:#71879e;
-  font-size:12px;
-  line-height:1.5;
-}
-
-@media(max-width:600px){
-
-  .teams,
-  .date-time{
-    grid-template-columns:1fr;
-  }
-
-  .logo{
-    font-size:25px;
-  }
-
-  .match-name{
-    font-size:20px;
-  }
-
-}
-
 </style>
 </head>
-
 
 <body>
 
 <main class="container">
 
-
-<header>
-
-  <div class="logo">
-    ⚽ <span>ROI PREDICTION</span> FIFA
-  </div>
-
-  <div class="subtitle">
-    FIFA FC 26 • Analyse Virtual AI
-  </div>
-
+<header class="header">
+ <div class="logo">⚽ ROI PREDICTION FIFA</div>
+ <div class="sub">FIFA FC 26 • Virtual AI</div>
 </header>
-
-
-<!-- FORMULAIRE -->
 
 <section class="card">
 
-  <div class="teams">
+ <label>Équipe domicile</label>
+ <input id="home" placeholder="Ex : Newcastle United">
 
-    <div>
+ <label>Équipe extérieur</label>
+ <input id="away" placeholder="Ex : Burnley">
 
-      <label>
-        ÉQUIPE DOMICILE
-      </label>
+ <label>Date du match</label>
+ <input id="date" type="date">
 
-      <input
-        id="home"
-        placeholder="Ex : Chelsea"
-        autocomplete="off"
-      >
+ <label>Heure du match</label>
+ <input id="time" type="time">
 
-    </div>
-
-
-    <div>
-
-      <label>
-        ÉQUIPE EXTÉRIEUR
-      </label>
-
-      <input
-        id="away"
-        placeholder="Ex : Leeds United"
-        autocomplete="off"
-      >
-
-    </div>
-
-  </div>
-
-
-  <div class="date-time">
-
-    <div>
-
-      <label>
-        DATE DU MATCH
-      </label>
-
-      <input
-        id="date"
-        type="date"
-      >
-
-    </div>
-
-
-    <div>
-
-      <label>
-        HEURE DU MATCH
-      </label>
-
-      <input
-        id="time"
-        type="time"
-      >
-
-    </div>
-
-  </div>
-
-
-  <button id="predict">
-    🔮 PRÉDICTION
-  </button>
+ <button id="predict">
+   🔮 PRÉDICTION
+ </button>
 
 </section>
 
+<div id="error" class="error hidden"></div>
 
-<div
-  id="error"
-  class="error hidden"
-></div>
-
-
-<div
-  id="loading"
-  class="card loading hidden"
->
-  ⚡ Analyse des données FIFA FC 26...
+<div id="loading" class="card loading hidden">
+ ⏳ Analyse des données FIFA...
 </div>
-
 
 <div id="results" class="hidden">
 
-
-<!-- MATCH -->
-
-<section class="card match">
-
-  <div class="match-label">
-    MATCH ANALYSÉ
-  </div>
-
-  <div
-    id="match"
-    class="match-name"
-  ></div>
-
-  <div
-    id="matchDate"
-    class="match-date"
-  ></div>
-
+<section class="card">
+ <div id="match" class="match"></div>
 </section>
 
+<section id="betCard" class="card bet">
 
-<!-- TENDANCE -->
+ <div class="signal" id="signal">🟢</div>
 
-<section class="card tendency">
+ <div id="message">OPTION FAVORABLE</div>
 
-  <div class="tendency-label">
-    TENDANCE PRINCIPALE
-  </div>
+ <div class="bet-name" id="betName">-</div>
 
-  <div
-    id="winner"
-    class="tendency-name"
-  ></div>
-
-  <div class="confidence">
-    Confiance :
-    <span id="confidence"></span>%
-  </div>
+ <div class="conf">
+   Confiance :
+   <strong id="betProbability">-</strong>
+ </div>
 
 </section>
-
-
-<!-- SIGNAL -->
-
-<section
-  id="signalCard"
-  class="card signal"
->
-
-  <div class="signal-title">
-    SOLIDITÉ DE L'ANALYSE
-  </div>
-
-  <div
-    id="signalIcon"
-    class="signal-icon"
-  ></div>
-
-  <div
-    id="signalLevel"
-    class="signal-level"
-  ></div>
-
-</section>
-
-
-<!-- DONNÉES -->
 
 <section class="card">
 
-  <div class="info">
+ <h2>📊 Analyse</h2>
 
-    <div class="info-box">
+ <div class="grid">
 
-      <small>
-        MATCHS DOMICILE
-      </small>
-
-      <strong id="homeMatches">
-        -
-      </strong>
-
-    </div>
-
-
-    <div class="info-box">
-
-      <small>
-        MATCHS EXTÉRIEUR
-      </small>
-
-      <strong id="awayMatches">
-        -
-      </strong>
-
-    </div>
-
-
-    <div class="info-box">
-
-      <small>
-        QUALITÉ DES DONNÉES
-      </small>
-
-      <strong id="quality">
-        -
-      </strong>
-
-    </div>
-
-
-    <div class="info-box">
-
-      <small>
-        CONFRONTATIONS
-      </small>
-
-      <strong id="h2h">
-        -
-      </strong>
-
-    </div>
-
+  <div class="stat">
+   <small>Vainqueur probable</small>
+   <strong id="winner">-</strong>
   </div>
 
+  <div class="stat">
+   <small>Confiance vainqueur</small>
+   <strong id="confidence">-</strong>
+  </div>
+
+  <div class="stat">
+   <small>Buts attendus domicile</small>
+   <strong id="homeXG">-</strong>
+  </div>
+
+  <div class="stat">
+   <small>Buts attendus extérieur</small>
+   <strong id="awayXG">-</strong>
+  </div>
+
+ </div>
+
 </section>
 
+<section class="card">
 
-<!-- NOTE -->
+ <h2>🎯 Scores probables</h2>
 
-<section class="card note">
-
-  Cette analyse indique uniquement la tendance
-  et la solidité des données utilisées par le
-  modèle FIFA Virtual AI.
+ <div id="scores" class="scores"></div>
 
 </section>
 
+<section class="card">
+
+ <h2>⚔️ H2H</h2>
+
+ <div class="grid">
+
+  <div class="stat">
+   <small>Matchs</small>
+   <strong id="h2hMatches">-</strong>
+  </div>
+
+  <div class="stat">
+   <small>Domicile</small>
+   <strong id="h2hHome">-</strong>
+  </div>
+
+  <div class="stat">
+   <small>Nuls</small>
+   <strong id="h2hDraw">-</strong>
+  </div>
+
+  <div class="stat">
+   <small>Extérieur</small>
+   <strong id="h2hAway">-</strong>
+  </div>
+
+ </div>
+
+</section>
+
+<section class="card">
+
+ <h2>📚 Données utilisées</h2>
+
+ <div class="grid">
+
+  <div class="stat">
+   <small id="homeName">Domicile</small>
+   <strong id="homeMatches">-</strong>
+  </div>
+
+  <div class="stat">
+   <small id="awayName">Extérieur</small>
+   <strong id="awayMatches">-</strong>
+  </div>
+
+  <div class="stat">
+   <small>Qualité des données</small>
+   <strong id="quality">-</strong>
+  </div>
+
+  <div class="stat">
+   <small>Forme domicile</small>
+   <strong id="homeForm">-</strong>
+  </div>
+
+ </div>
+
+</section>
 
 </div>
 
 </main>
 
-
 <script>
+const $ = id => document.getElementById(id);
 
-const $ = id =>
-  document.getElementById(id);
-
-
-const home =
-  $("home");
-
-const away =
-  $("away");
-
-const date =
-  $("date");
-
-const time =
-  $("time");
-
-const button =
-  $("predict");
-
-const results =
-  $("results");
-
-const loading =
-  $("loading");
-
-const error =
-  $("error");
-
-
-function showError(message){
-
-  error.textContent =
-    "❌ " + message;
-
-  error.classList.remove(
-    "hidden"
-  );
-
+function percent(v){
+ return Number(v).toFixed(1) + "%";
 }
 
+function number(v){
+ return Number(v).toFixed(2);
+}
+
+function error(message){
+ $("error").textContent = "❌ " + message;
+ $("error").classList.remove("hidden");
+ $("results").classList.add("hidden");
+}
 
 function clearError(){
-
-  error.classList.add(
-    "hidden"
-  );
-
+ $("error").classList.add("hidden");
 }
-
 
 async function predict(){
 
-  clearError();
+ clearError();
 
-  const h =
-    home.value.trim();
+ const home = $("home").value.trim();
+ const away = $("away").value.trim();
 
-  const a =
-    away.value.trim();
+ if(!home || !away){
+  error("Entrez les deux équipes.");
+  return;
+ }
 
+ if(home.toLowerCase() === away.toLowerCase()){
+  error("Les deux équipes doivent être différentes.");
+  return;
+ }
 
-  if(!h || !a){
+ $("predict").disabled = true;
+ $("loading").classList.remove("hidden");
+ $("results").classList.add("hidden");
 
-    showError(
-      "Veuillez entrer les deux équipes."
-    );
+ try{
 
-    return;
+  const url =
+   "/api/predict?home=" +
+   encodeURIComponent(home) +
+   "&away=" +
+   encodeURIComponent(away);
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if(!response.ok || !data.success){
+   throw new Error(
+    data.message || "Erreur de prédiction."
+   );
   }
 
+  display(data.prediction);
 
-  if(
-    h.toLowerCase() ===
-    a.toLowerCase()
-  ){
+ }catch(e){
 
-    showError(
-      "Les deux équipes doivent être différentes."
-    );
+  console.error(e);
+  error(e.message);
 
-    return;
-  }
+ }finally{
 
-
-  button.disabled =
-    true;
-
-  loading.classList.remove(
-    "hidden"
-  );
-
-  results.classList.add(
-    "hidden"
-  );
-
-
-  try{
-
-    /*
-     * Date et heure sont envoyées
-     * pour conserver le contexte du match.
-     */
-
-    const params =
-      new URLSearchParams({
-        home:h,
-        away:a,
-        date:date.value,
-        time:time.value
-      });
-
-
-    const response =
-      await fetch(
-        "/api/predict?" +
-        params.toString()
-      );
-
-
-    const data =
-      await response.json();
-
-
-    if(
-      !response.ok ||
-      !data.success
-    ){
-
-      throw new Error(
-        data.message ||
-        "Erreur pendant l'analyse."
-      );
-
-    }
-
-
-    display(
-      data.prediction
-    );
-
-
-  }catch(err){
-
-    console.error(err);
-
-    showError(
-      err.message ||
-      "Impossible d'effectuer l'analyse."
-    );
-
-
-  }finally{
-
-    button.disabled =
-      false;
-
-    loading.classList.add(
-      "hidden"
-    );
-
-  }
-
+  $("predict").disabled = false;
+  $("loading").classList.add("hidden");
+ }
 }
-
 
 function display(p){
 
-  const h =
-    p.teams.home;
+ const home = p.match.home;
+ const away = p.match.away;
+ const pred = p.predictions;
+ const bet = p.bestBet;
 
-  const a =
-    p.teams.away;
+ $("match").textContent =
+  home + "  VS  " + away;
 
-  const m =
-    p.match;
+ $("winner").textContent =
+  pred.winner;
 
-  const pred =
-    p.predictions;
+ $("confidence").textContent =
+  percent(pred.confidence);
 
+ $("homeXG").textContent =
+  number(p.expectedGoals.home);
 
-  results.classList.remove(
-    "hidden"
-  );
+ $("awayXG").textContent =
+  number(p.expectedGoals.away);
 
+ $("homeName").textContent = home;
+ $("awayName").textContent = away;
 
-  $("match").textContent =
-    `${m.home}  VS  ${m.away}`;
+ $("homeMatches").textContent =
+  p.teams.home.matches + " matchs";
 
+ $("awayMatches").textContent =
+  p.teams.away.matches + " matchs";
 
-  const selectedDate =
-    date.value;
+ $("homeForm").textContent =
+  number(p.teams.home.form);
 
-  const selectedTime =
-    time.value;
+ $("quality").textContent =
+  pred.dataQuality + "%";
 
+ if(p.h2h){
 
-  if(
-    selectedDate ||
-    selectedTime
-  ){
+  $("h2hMatches").textContent =
+   p.h2h.matches;
 
-    $("matchDate").textContent =
-      `${selectedDate || ""} ${
-        selectedTime || ""
-      }`;
+  $("h2hHome").textContent =
+   percent(p.h2h.homeWinRate);
 
-  }else{
+  $("h2hDraw").textContent =
+   percent(p.h2h.drawRate);
 
-    $("matchDate").textContent =
-      "Date et heure non renseignées";
+  $("h2hAway").textContent =
+   percent(p.h2h.awayWinRate);
+ }
 
-  }
+ $("betName").textContent =
+  bet.option;
 
+ $("betProbability").textContent =
+  percent(bet.probability);
 
-  $("winner").textContent =
-    pred.winner;
+ $("message").textContent =
+  bet.message;
 
+ const card = $("betCard");
 
-  $("confidence").textContent =
-    pred.confidence;
+ card.classList.remove("orange","red");
 
+ if(bet.signal === "VERT"){
+  $("signal").textContent = "🟢";
+ }
 
-  $("signalIcon").textContent =
-    pred.signalIcon;
+ if(bet.signal === "ORANGE"){
+  $("signal").textContent = "🟠";
+  card.classList.add("orange");
+ }
 
+ if(bet.signal === "ROUGE"){
+  $("signal").textContent = "🔴";
+  card.classList.add("red");
+ }
 
-  $("signalLevel").textContent =
-    pred.signal;
+ const scores = $("scores");
+ scores.innerHTML = "";
 
+ p.topScores.forEach(s => {
 
-  const signalCard =
-    $("signalCard");
+  const div = document.createElement("div");
+  div.className = "score";
 
+  div.innerHTML =
+   "<b>" + s.score + "</b>" +
+   "<span>" + percent(s.probability) + "</span>";
 
-  signalCard.classList.remove(
-    "green",
-    "orange",
-    "red"
-  );
+  scores.appendChild(div);
+ });
 
-
-  signalCard.classList.add(
-    pred.signalColor || "orange"
-  );
-
-
-  $("homeMatches").textContent =
-    h.matches;
-
-
-  $("awayMatches").textContent =
-    a.matches;
-
-
-  $("quality").textContent =
-    (pred.dataQuality || 0) + "%";
-
-
-  $("h2h").textContent =
-    p.h2h
-      ? p.h2h.matches
-      : 0;
-
+ $("results").classList.remove("hidden");
 }
 
-
-button.addEventListener(
-  "click",
-  predict
+$("predict").addEventListener(
+ "click",
+ predict
 );
 
-
-home.addEventListener(
-  "keydown",
-  e => {
-    if(e.key === "Enter"){
-      predict();
-    }
-  }
+$("home").addEventListener(
+ "keydown",
+ e => {
+  if(e.key === "Enter") predict();
+ }
 );
 
-
-away.addEventListener(
-  "keydown",
-  e => {
-    if(e.key === "Enter"){
-      predict();
-    }
-  }
+$("away").addEventListener(
+ "keydown",
+ e => {
+  if(e.key === "Enter") predict();
+ }
 );
-
 </script>
 
 </body>
