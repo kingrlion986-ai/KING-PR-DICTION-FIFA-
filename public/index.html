@@ -3,544 +3,972 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>ROI PREDICTION FIFA</title>
 
 <style>
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+}
 
 body{
- margin:0;
- font-family:Arial,sans-serif;
- background:
- radial-gradient(circle at top,#172554,#020617 65%);
- color:#fff;
- min-height:100vh;
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:
+    radial-gradient(circle at top,#172554 0,#020617 45%,#000 100%);
+  color:#fff;
+  min-height:100vh;
 }
 
 .container{
- width:min(94%,650px);
- margin:auto;
- padding:35px 0 60px;
+  width:min(900px,94%);
+  margin:auto;
+  padding:25px 0 50px;
 }
 
-.header{text-align:center;margin-bottom:25px}
+/* =========================
+   HEADER
+========================= */
+
+.header{
+  text-align:center;
+  margin-bottom:25px;
+}
 
 .logo{
- font-size:32px;
- font-weight:900;
- letter-spacing:1px;
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:1px;
 }
 
-.sub{
- color:#94a3b8;
- margin-top:7px;
+.subtitle{
+  color:#94a3b8;
+  margin-top:6px;
+  font-size:14px;
 }
+
+/* =========================
+   FORMULAIRE
+========================= */
 
 .card{
- background:rgba(15,23,42,.88);
- border:1px solid #334155;
- border-radius:18px;
- padding:20px;
- margin-bottom:16px;
- box-shadow:0 10px 30px rgba(0,0,0,.25);
+  background:rgba(15,23,42,.88);
+  border:1px solid rgba(148,163,184,.15);
+  border-radius:20px;
+  padding:22px;
+  box-shadow:0 15px 50px rgba(0,0,0,.35);
+  margin-bottom:20px;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
 }
 
 label{
- display:block;
- font-weight:bold;
- margin-bottom:7px;
- color:#cbd5e1;
+  display:block;
+  color:#94a3b8;
+  font-size:13px;
+  margin-bottom:7px;
 }
 
 input{
- width:100%;
- padding:14px;
- margin-bottom:14px;
- border-radius:10px;
- border:1px solid #475569;
- background:#020617;
- color:white;
- font-size:16px;
- outline:none;
+  width:100%;
+  padding:14px;
+  border:1px solid #334155;
+  border-radius:10px;
+  background:#020617;
+  color:#fff;
+  font-size:15px;
+  outline:none;
 }
 
-input:focus{border-color:#38bdf8}
+input:focus{
+  border-color:#38bdf8;
+}
 
 button{
- width:100%;
- padding:15px;
- border:0;
- border-radius:11px;
- background:linear-gradient(90deg,#2563eb,#06b6d4);
- color:white;
- font-size:17px;
- font-weight:bold;
- cursor:pointer;
+  width:100%;
+  margin-top:18px;
+  padding:15px;
+  border:0;
+  border-radius:12px;
+  background:linear-gradient(90deg,#2563eb,#06b6d4);
+  color:white;
+  font-size:16px;
+  font-weight:900;
+  cursor:pointer;
 }
 
-button:disabled{
- opacity:.6;
- cursor:wait;
+button:active{
+  transform:scale(.99);
 }
 
-.hidden{display:none}
+/* =========================
+   MATCH
+========================= */
 
-.match{
- text-align:center;
- font-size:22px;
- font-weight:bold;
+.match-title{
+  text-align:center;
+  font-size:22px;
+  font-weight:900;
+  margin-bottom:20px;
 }
 
-.loading{
- text-align:center;
- color:#38bdf8;
+.vs{
+  color:#38bdf8;
+  padding:0 8px;
 }
 
-.error{
- background:#7f1d1d;
- color:#fecaca;
- padding:14px;
- border-radius:10px;
- margin-bottom:16px;
+/* =========================
+   VERDICT
+========================= */
+
+.verdict{
+  text-align:center;
+  border-radius:20px;
+  padding:25px 18px;
+  margin-bottom:20px;
+  border:2px solid #334155;
+  background:#020617;
 }
 
-.bet{
- text-align:center;
- border:2px solid #22c55e;
- background:rgba(34,197,94,.08);
-}
-
-.bet.orange{
- border-color:#f59e0b;
- background:rgba(245,158,11,.08);
-}
-
-.bet.red{
- border-color:#ef4444;
- background:rgba(239,68,68,.08);
+.verdict-label{
+  font-size:12px;
+  color:#94a3b8;
+  letter-spacing:2px;
+  font-weight:bold;
 }
 
 .signal{
- font-size:38px;
- font-weight:900;
- margin:5px 0;
+  font-size:48px;
+  margin:10px 0;
 }
 
-.bet-name{
- font-size:25px;
- font-weight:bold;
- margin:12px 0;
+.option{
+  font-size:25px;
+  font-weight:900;
 }
 
-.conf{
- font-size:18px;
- color:#cbd5e1;
+.confidence{
+  margin-top:10px;
+  font-size:17px;
+  color:#cbd5e1;
 }
 
-.grid{
- display:grid;
- grid-template-columns:1fr 1fr;
- gap:12px;
+.verdict-message{
+  margin-top:12px;
+  font-weight:bold;
+}
+
+.reason{
+  margin:12px auto 0;
+  max-width:650px;
+  color:#94a3b8;
+  font-size:14px;
+  line-height:1.5;
+}
+
+/* =========================
+   STATISTIQUES
+========================= */
+
+.section-title{
+  font-size:14px;
+  font-weight:900;
+  color:#38bdf8;
+  margin-bottom:12px;
+  letter-spacing:1px;
+}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
 }
 
 .stat{
- background:#020617;
- border-radius:12px;
- padding:15px;
+  background:#020617;
+  border:1px solid #1e293b;
+  border-radius:12px;
+  padding:15px;
 }
 
-.stat small{
- display:block;
- color:#94a3b8;
- margin-bottom:6px;
+.stat-name{
+  color:#64748b;
+  font-size:12px;
 }
 
-.stat strong{
- font-size:20px;
+.stat-value{
+  font-size:20px;
+  font-weight:bold;
+  margin-top:5px;
 }
+
+/* =========================
+   SCORES
+========================= */
 
 .scores{
- display:grid;
- grid-template-columns:repeat(3,1fr);
- gap:10px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
 }
 
 .score{
- text-align:center;
- background:#020617;
- padding:14px 5px;
- border-radius:10px;
+  background:#020617;
+  border:1px solid #1e293b;
+  border-radius:12px;
+  text-align:center;
+  padding:14px;
 }
 
-.score b{
- font-size:23px;
- display:block;
+.score strong{
+  display:block;
+  font-size:21px;
 }
 
 .score span{
- color:#94a3b8;
+  color:#94a3b8;
+  font-size:12px;
 }
 
-h2{
- margin-top:0;
- font-size:19px;
+/* =========================
+   MESSAGE
+========================= */
+
+#loading,
+#error{
+  display:none;
+  text-align:center;
+  padding:15px;
+  margin-top:15px;
+  border-radius:10px;
 }
 
-@media(max-width:500px){
- .grid{grid-template-columns:1fr}
- .logo{font-size:26px}
- .bet-name{font-size:21px}
+#loading{
+  background:#172554;
+  color:#93c5fd;
+}
+
+#error{
+  background:#450a0a;
+  color:#fca5a5;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:650px){
+
+  .form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .option{
+    font-size:21px;
+  }
+
+  .stats-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .scores{
+    grid-template-columns:1fr 1fr 1fr;
+  }
 }
 </style>
 </head>
 
 <body>
 
-<main class="container">
+<div class="container">
 
-<header class="header">
- <div class="logo">⚽ ROI PREDICTION FIFA</div>
- <div class="sub">FIFA FC 26 • Virtual AI</div>
-</header>
+  <div class="header">
+    <div class="logo">⚽ ROI PREDICTION FIFA</div>
+    <div class="subtitle">FIFA FC 26 • Virtual AI</div>
+  </div>
 
-<section class="card">
+  <!-- =========================
+       FORMULAIRE
+  ========================== -->
 
- <label>Équipe domicile</label>
- <input id="home" placeholder="Ex : Newcastle United">
+  <div class="card">
 
- <label>Équipe extérieur</label>
- <input id="away" placeholder="Ex : Burnley">
+    <div class="form-grid">
 
- <label>Date du match</label>
- <input id="date" type="date">
+      <div>
+        <label>ÉQUIPE DOMICILE</label>
+        <input
+          id="home"
+          type="text"
+          placeholder="Ex : Burnley"
+        >
+      </div>
 
- <label>Heure du match</label>
- <input id="time" type="time">
+      <div>
+        <label>ÉQUIPE EXTÉRIEUR</label>
+        <input
+          id="away"
+          type="text"
+          placeholder="Ex : Arsenal"
+        >
+      </div>
 
- <button id="predict">
-   🔮 PRÉDICTION
- </button>
+      <div>
+        <label>DATE DU MATCH</label>
+        <input
+          id="date"
+          type="date"
+        >
+      </div>
 
-</section>
+      <div>
+        <label>HEURE DU MATCH</label>
+        <input
+          id="time"
+          type="time"
+        >
+      </div>
 
-<div id="error" class="error hidden"></div>
+    </div>
 
-<div id="loading" class="card loading hidden">
- ⏳ Analyse des données FIFA...
+    <button onclick="predict()">
+      🔮 ANALYSER LE MATCH
+    </button>
+
+    <div id="loading">
+      ⚙️ Analyse des données FIFA Virtual...
+    </div>
+
+    <div id="error"></div>
+
+  </div>
+
+
+  <!-- =========================
+       RÉSULTAT
+  ========================== -->
+
+  <div id="result" style="display:none">
+
+    <div class="card">
+
+      <div class="match-title">
+        <span id="homeName"></span>
+        <span class="vs">VS</span>
+        <span id="awayName"></span>
+      </div>
+
+      <!-- VERDICT -->
+
+      <div class="verdict" id="verdict">
+
+        <div class="verdict-label">
+          VERDICT FINAL
+        </div>
+
+        <div
+          class="signal"
+          id="signal"
+        >
+          🟢
+        </div>
+
+        <div
+          class="option"
+          id="option"
+        >
+          —
+        </div>
+
+        <div
+          class="confidence"
+          id="confidence"
+        >
+          Confiance : —
+        </div>
+
+        <div
+          class="verdict-message"
+          id="verdictMessage"
+        >
+          —
+        </div>
+
+        <div
+          class="reason"
+          id="reason"
+        >
+          —
+        </div>
+
+      </div>
+
+
+      <!-- ANALYSE -->
+
+      <div class="section-title">
+        📊 ANALYSE DU MATCH
+      </div>
+
+      <div class="stats-grid">
+
+        <div class="stat">
+          <div class="stat-name">
+            VAINQUEUR PROBABLE
+          </div>
+
+          <div
+            class="stat-value"
+            id="winner"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-name">
+            CONFIANCE VAINQUEUR
+          </div>
+
+          <div
+            class="stat-value"
+            id="winnerConfidence"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-name">
+            BUTS ATTENDUS DOMICILE
+          </div>
+
+          <div
+            class="stat-value"
+            id="homeXG"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-name">
+            BUTS ATTENDUS EXTÉRIEUR
+          </div>
+
+          <div
+            class="stat-value"
+            id="awayXG"
+          >
+            —
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- SCORES -->
+
+    <div class="card">
+
+      <div class="section-title">
+        🎯 SCORES PROBABLES
+      </div>
+
+      <div
+        class="scores"
+        id="scores"
+      ></div>
+
+    </div>
+
+
+    <!-- H2H -->
+
+    <div class="card">
+
+      <div class="section-title">
+        ⚔️ H2H
+      </div>
+
+      <div class="stats-grid">
+
+        <div class="stat">
+          <div class="stat-name">
+            MATCHS
+          </div>
+
+          <div
+            class="stat-value"
+            id="h2hMatches"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-name">
+            DOMICILE
+          </div>
+
+          <div
+            class="stat-value"
+            id="h2hHome"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-name">
+            NULS
+          </div>
+
+          <div
+            class="stat-value"
+            id="h2hDraw"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-name">
+            EXTÉRIEUR
+          </div>
+
+          <div
+            class="stat-value"
+            id="h2hAway"
+          >
+            —
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- DONNÉES -->
+
+    <div class="card">
+
+      <div class="section-title">
+        📚 DONNÉES UTILISÉES
+      </div>
+
+      <div class="stats-grid">
+
+        <div class="stat">
+          <div
+            class="stat-name"
+            id="homeTeamLabel"
+          >
+            DOMICILE
+          </div>
+
+          <div
+            class="stat-value"
+            id="homeMatches"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div
+            class="stat-name"
+            id="awayTeamLabel"
+          >
+            EXTÉRIEUR
+          </div>
+
+          <div
+            class="stat-value"
+            id="awayMatches"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-name">
+            QUALITÉ DES DONNÉES
+          </div>
+
+          <div
+            class="stat-value"
+            id="quality"
+          >
+            —
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-name">
+            FORME DOMICILE
+          </div>
+
+          <div
+            class="stat-value"
+            id="homeForm"
+          >
+            —
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
 </div>
 
-<div id="results" class="hidden">
-
-<section class="card">
- <div id="match" class="match"></div>
-</section>
-
-<section id="betCard" class="card bet">
-
- <div class="signal" id="signal">🟢</div>
-
- <div id="message">OPTION FAVORABLE</div>
-
- <div class="bet-name" id="betName">-</div>
-
- <div class="conf">
-   Confiance :
-   <strong id="betProbability">-</strong>
- </div>
-
-</section>
-
-<section class="card">
-
- <h2>📊 Analyse</h2>
-
- <div class="grid">
-
-  <div class="stat">
-   <small>Vainqueur probable</small>
-   <strong id="winner">-</strong>
-  </div>
-
-  <div class="stat">
-   <small>Confiance vainqueur</small>
-   <strong id="confidence">-</strong>
-  </div>
-
-  <div class="stat">
-   <small>Buts attendus domicile</small>
-   <strong id="homeXG">-</strong>
-  </div>
-
-  <div class="stat">
-   <small>Buts attendus extérieur</small>
-   <strong id="awayXG">-</strong>
-  </div>
-
- </div>
-
-</section>
-
-<section class="card">
-
- <h2>🎯 Scores probables</h2>
-
- <div id="scores" class="scores"></div>
-
-</section>
-
-<section class="card">
-
- <h2>⚔️ H2H</h2>
-
- <div class="grid">
-
-  <div class="stat">
-   <small>Matchs</small>
-   <strong id="h2hMatches">-</strong>
-  </div>
-
-  <div class="stat">
-   <small>Domicile</small>
-   <strong id="h2hHome">-</strong>
-  </div>
-
-  <div class="stat">
-   <small>Nuls</small>
-   <strong id="h2hDraw">-</strong>
-  </div>
-
-  <div class="stat">
-   <small>Extérieur</small>
-   <strong id="h2hAway">-</strong>
-  </div>
-
- </div>
-
-</section>
-
-<section class="card">
-
- <h2>📚 Données utilisées</h2>
-
- <div class="grid">
-
-  <div class="stat">
-   <small id="homeName">Domicile</small>
-   <strong id="homeMatches">-</strong>
-  </div>
-
-  <div class="stat">
-   <small id="awayName">Extérieur</small>
-   <strong id="awayMatches">-</strong>
-  </div>
-
-  <div class="stat">
-   <small>Qualité des données</small>
-   <strong id="quality">-</strong>
-  </div>
-
-  <div class="stat">
-   <small>Forme domicile</small>
-   <strong id="homeForm">-</strong>
-  </div>
-
- </div>
-
-</section>
-
-</div>
-
-</main>
 
 <script>
-const $ = id => document.getElementById(id);
-
-function percent(v){
- return Number(v).toFixed(1) + "%";
-}
-
-function number(v){
- return Number(v).toFixed(2);
-}
-
-function error(message){
- $("error").textContent = "❌ " + message;
- $("error").classList.remove("hidden");
- $("results").classList.add("hidden");
-}
-
-function clearError(){
- $("error").classList.add("hidden");
-}
 
 async function predict(){
 
- clearError();
+  const home =
+    document
+      .getElementById("home")
+      .value
+      .trim();
 
- const home = $("home").value.trim();
- const away = $("away").value.trim();
+  const away =
+    document
+      .getElementById("away")
+      .value
+      .trim();
 
- if(!home || !away){
-  error("Entrez les deux équipes.");
-  return;
- }
+  const date =
+    document
+      .getElementById("date")
+      .value;
 
- if(home.toLowerCase() === away.toLowerCase()){
-  error("Les deux équipes doivent être différentes.");
-  return;
- }
+  const time =
+    document
+      .getElementById("time")
+      .value;
 
- $("predict").disabled = true;
- $("loading").classList.remove("hidden");
- $("results").classList.add("hidden");
+  const loading =
+    document.getElementById("loading");
 
- try{
+  const error =
+    document.getElementById("error");
 
-  const url =
-   "/api/predict?home=" +
-   encodeURIComponent(home) +
-   "&away=" +
-   encodeURIComponent(away);
+  const result =
+    document.getElementById("result");
 
-  const response = await fetch(url);
-  const data = await response.json();
 
-  if(!response.ok || !data.success){
-   throw new Error(
-    data.message || "Erreur de prédiction."
-   );
+  error.style.display = "none";
+  result.style.display = "none";
+
+  if(!home || !away){
+
+    error.textContent =
+      "❌ Les deux équipes sont obligatoires.";
+
+    error.style.display = "block";
+
+    return;
   }
 
-  display(data.prediction);
+  if(
+    home.toLowerCase() ===
+    away.toLowerCase()
+  ){
 
- }catch(e){
+    error.textContent =
+      "❌ Les deux équipes doivent être différentes.";
 
-  console.error(e);
-  error(e.message);
+    error.style.display = "block";
 
- }finally{
+    return;
+  }
 
-  $("predict").disabled = false;
-  $("loading").classList.add("hidden");
- }
+
+  loading.style.display = "block";
+
+
+  try{
+
+    const response =
+      await fetch(
+        `/api/predict?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if(
+      !response.ok ||
+      !data.success
+    ){
+
+      throw new Error(
+        data.message ||
+        "Erreur pendant la prédiction."
+      );
+    }
+
+
+    displayPrediction(
+      data.prediction
+    );
+
+
+    result.style.display =
+      "block";
+
+
+  }catch(err){
+
+    error.textContent =
+      "❌ " + err.message;
+
+    error.style.display =
+      "block";
+
+  }finally{
+
+    loading.style.display =
+      "none";
+  }
 }
 
-function display(p){
 
- const home = p.match.home;
- const away = p.match.away;
- const pred = p.predictions;
- const bet = p.bestBet;
+/* =========================
+   AFFICHAGE
+========================= */
 
- $("match").textContent =
-  home + "  VS  " + away;
+function displayPrediction(p){
 
- $("winner").textContent =
-  pred.winner;
+  const home =
+    p.match.home;
 
- $("confidence").textContent =
-  percent(pred.confidence);
+  const away =
+    p.match.away;
 
- $("homeXG").textContent =
-  number(p.expectedGoals.home);
+  const best =
+    p.bestBet;
 
- $("awayXG").textContent =
-  number(p.expectedGoals.away);
+  const predictions =
+    p.predictions;
 
- $("homeName").textContent = home;
- $("awayName").textContent = away;
+  const h2h =
+    p.h2h;
 
- $("homeMatches").textContent =
-  p.teams.home.matches + " matchs";
+  const xg =
+    p.expectedGoals;
 
- $("awayMatches").textContent =
-  p.teams.away.matches + " matchs";
 
- $("homeForm").textContent =
-  number(p.teams.home.form);
+  document.getElementById(
+    "homeName"
+  ).textContent = home;
 
- $("quality").textContent =
-  pred.dataQuality + "%";
+  document.getElementById(
+    "awayName"
+  ).textContent = away;
 
- if(p.h2h){
 
-  $("h2hMatches").textContent =
-   p.h2h.matches;
+  /* =========================
+     VERDICT
+  ========================= */
 
-  $("h2hHome").textContent =
-   percent(p.h2h.homeWinRate);
+  let emoji = "🔴";
 
-  $("h2hDraw").textContent =
-   percent(p.h2h.drawRate);
+  if(best.signal === "VERT"){
+    emoji = "🟢";
+  }
 
-  $("h2hAway").textContent =
-   percent(p.h2h.awayWinRate);
- }
+  if(best.signal === "ORANGE"){
+    emoji = "🟠";
+  }
 
- $("betName").textContent =
-  bet.option;
+  document.getElementById(
+    "signal"
+  ).textContent = emoji;
 
- $("betProbability").textContent =
-  percent(bet.probability);
 
- $("message").textContent =
-  bet.message;
+  document.getElementById(
+    "option"
+  ).textContent =
+    best.option;
 
- const card = $("betCard");
 
- card.classList.remove("orange","red");
+  document.getElementById(
+    "confidence"
+  ).textContent =
+    `Confiance : ${best.probability}%`;
 
- if(bet.signal === "VERT"){
-  $("signal").textContent = "🟢";
- }
 
- if(bet.signal === "ORANGE"){
-  $("signal").textContent = "🟠";
-  card.classList.add("orange");
- }
+  document.getElementById(
+    "verdictMessage"
+  ).textContent =
+    best.message;
 
- if(bet.signal === "ROUGE"){
-  $("signal").textContent = "🔴";
-  card.classList.add("red");
- }
 
- const scores = $("scores");
- scores.innerHTML = "";
+  document.getElementById(
+    "reason"
+  ).textContent =
+    best.reason;
 
- p.topScores.forEach(s => {
 
-  const div = document.createElement("div");
-  div.className = "score";
+  const verdict =
+    document.getElementById(
+      "verdict"
+    );
 
-  div.innerHTML =
-   "<b>" + s.score + "</b>" +
-   "<span>" + percent(s.probability) + "</span>";
 
-  scores.appendChild(div);
- });
+  verdict.style.borderColor =
+    best.color;
 
- $("results").classList.remove("hidden");
+
+  /* =========================
+     ANALYSE
+  ========================= */
+
+  document.getElementById(
+    "winner"
+  ).textContent =
+    predictions.winner;
+
+
+  document.getElementById(
+    "winnerConfidence"
+  ).textContent =
+    predictions.confidence + "%";
+
+
+  document.getElementById(
+    "homeXG"
+  ).textContent =
+    xg.home;
+
+
+  document.getElementById(
+    "awayXG"
+  ).textContent =
+    xg.away;
+
+
+  /* =========================
+     SCORES
+  ========================= */
+
+  const scores =
+    document.getElementById(
+      "scores"
+    );
+
+  scores.innerHTML = "";
+
+  (p.topScores || [])
+    .forEach(s => {
+
+      const div =
+        document.createElement(
+          "div"
+        );
+
+      div.className =
+        "score";
+
+      div.innerHTML =
+        `<strong>${s.score}</strong>
+         <span>${s.probability}%</span>`;
+
+      scores.appendChild(div);
+    });
+
+
+  /* =========================
+     H2H
+  ========================= */
+
+  document.getElementById(
+    "h2hMatches"
+  ).textContent =
+    h2h.matches;
+
+
+  document.getElementById(
+    "h2hHome"
+  ).textContent =
+    h2h.homeWinRate + "%";
+
+
+  document.getElementById(
+    "h2hDraw"
+  ).textContent =
+    h2h.drawRate + "%";
+
+
+  document.getElementById(
+    "h2hAway"
+  ).textContent =
+    h2h.awayWinRate + "%";
+
+
+  /* =========================
+     DONNÉES
+  ========================= */
+
+  document.getElementById(
+    "homeTeamLabel"
+  ).textContent =
+    home;
+
+
+  document.getElementById(
+    "awayTeamLabel"
+  ).textContent =
+    away;
+
+
+  document.getElementById(
+    "homeMatches"
+  ).textContent =
+    p.teams.home.matches +
+    " matchs";
+
+
+  document.getElementById(
+    "awayMatches"
+  ).textContent =
+    p.teams.away.matches +
+    " matchs";
+
+
+  document.getElementById(
+    "quality"
+  ).textContent =
+    predictions.dataQuality +
+    "%";
+
+
+  document.getElementById(
+    "homeForm"
+  ).textContent =
+    Number(
+      p.teams.home.form
+        .toFixed(2)
+    );
+
 }
 
-$("predict").addEventListener(
- "click",
- predict
-);
-
-$("home").addEventListener(
- "keydown",
- e => {
-  if(e.key === "Enter") predict();
- }
-);
-
-$("away").addEventListener(
- "keydown",
- e => {
-  if(e.key === "Enter") predict();
- }
-);
 </script>
 
 </body>
-</html>
+ </html>
