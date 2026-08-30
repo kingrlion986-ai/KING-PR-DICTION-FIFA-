@@ -21,9 +21,16 @@ function poisson(k, lambda) {
   if (lambda <= 0) return k === 0 ? 1 : 0;
 
   let fact = 1;
-  for (let i = 2; i <= k; i++) fact *= i;
 
-  return Math.exp(-lambda) * Math.pow(lambda, k) / fact;
+  for (let i = 2; i <= k; i++) {
+    fact *= i;
+  }
+
+  return (
+    Math.exp(-lambda) *
+    Math.pow(lambda, k) /
+    fact
+  );
 }
 
 /* =========================
@@ -31,7 +38,8 @@ function poisson(k, lambda) {
 ========================= */
 
 function analyzeTeam(team) {
-  const matches = getTeamMatches(team) || [];
+  const matches =
+    getTeamMatches(team) || [];
 
   if (!matches.length) {
     return {
@@ -50,15 +58,20 @@ function analyzeTeam(team) {
 
   const scored = [];
   const conceded = [];
+
   const homeScored = [];
   const homeConceded = [];
+
   const awayScored = [];
   const awayConceded = [];
+
   const results = [];
 
   for (const m of matches) {
+
     const isHome =
-      m.home.toLowerCase() === team.toLowerCase();
+      m.home.toLowerCase() ===
+      team.toLowerCase();
 
     const gf = isHome
       ? Number(m.homeGoals)
@@ -79,9 +92,13 @@ function analyzeTeam(team) {
       awayConceded.push(ga);
     }
 
-    if (gf > ga) results.push(1);
-    else if (gf === ga) results.push(0.5);
-    else results.push(0);
+    if (gf > ga) {
+      results.push(1);
+    } else if (gf === ga) {
+      results.push(0.5);
+    } else {
+      results.push(0);
+    }
   }
 
   return {
@@ -98,10 +115,12 @@ function analyzeTeam(team) {
     awayAvgConceded: avg(awayConceded),
 
     winRate: results.length
-      ? results.reduce((a, b) => a + b, 0) / results.length
+      ? results.reduce((a, b) => a + b, 0) /
+        results.length
       : 0,
 
-    form: avg(results.slice(-5)) * 2
+    form:
+      avg(results.slice(-5)) * 2
   };
 }
 
@@ -110,17 +129,26 @@ function analyzeTeam(team) {
 ========================= */
 
 function calculateExpectedGoals(home, away) {
+
   const homeAttack =
-    home.homeAvgScored || home.avgScored || 1;
+    home.homeAvgScored ||
+    home.avgScored ||
+    1;
 
   const homeDefense =
-    home.homeAvgConceded || home.avgConceded || 1;
+    home.homeAvgConceded ||
+    home.avgConceded ||
+    1;
 
   const awayAttack =
-    away.awayAvgScored || away.avgScored || 1;
+    away.awayAvgScored ||
+    away.avgScored ||
+    1;
 
   const awayDefense =
-    away.awayAvgConceded || away.avgConceded || 1;
+    away.awayAvgConceded ||
+    away.avgConceded ||
+    1;
 
   let homeXG =
     (homeAttack * 0.60) +
@@ -133,8 +161,13 @@ function calculateExpectedGoals(home, away) {
   homeXG *= 1.05;
 
   return {
-    home: Number(clamp(homeXG, 0.20, 4.5).toFixed(2)),
-    away: Number(clamp(awayXG, 0.20, 4.5).toFixed(2))
+    home: Number(
+      clamp(homeXG, 0.20, 4.5).toFixed(2)
+    ),
+
+    away: Number(
+      clamp(awayXG, 0.20, 4.5).toFixed(2)
+    )
   };
 }
 
@@ -143,10 +176,13 @@ function calculateExpectedGoals(home, away) {
 ========================= */
 
 function buildScores(homeXG, awayXG) {
+
   const scores = [];
 
   for (let h = 0; h <= 8; h++) {
+
     for (let a = 0; a <= 8; a++) {
+
       const probability =
         poisson(h, homeXG) *
         poisson(a, awayXG);
@@ -167,22 +203,41 @@ function buildScores(homeXG, awayXG) {
 ========================= */
 
 function calculateMarkets(scores) {
+
   let homeWin = 0;
   let draw = 0;
   let awayWin = 0;
+
+  let over15 = 0;
   let over25 = 0;
   let bttsYes = 0;
 
   for (const s of scores) {
-    if (s.home > s.away) homeWin += s.probability;
-    if (s.home === s.away) draw += s.probability;
-    if (s.home < s.away) awayWin += s.probability;
+
+    if (s.home > s.away) {
+      homeWin += s.probability;
+    }
+
+    if (s.home === s.away) {
+      draw += s.probability;
+    }
+
+    if (s.home < s.away) {
+      awayWin += s.probability;
+    }
+
+    if (s.home + s.away >= 2) {
+      over15 += s.probability;
+    }
 
     if (s.home + s.away >= 3) {
       over25 += s.probability;
     }
 
-    if (s.home > 0 && s.away > 0) {
+    if (
+      s.home > 0 &&
+      s.away > 0
+    ) {
       bttsYes += s.probability;
     }
   }
@@ -191,9 +246,7 @@ function calculateMarkets(scores) {
     homeWin: homeWin * 100,
     draw: draw * 100,
     awayWin: awayWin * 100,
-    over15: 100 - scores
-      .filter(s => s.home + s.away <= 1)
-      .reduce((a, s) => a + s.probability * 100, 0),
+    over15: over15 * 100,
     over25: over25 * 100,
     bttsYes: bttsYes * 100
   };
@@ -203,19 +256,38 @@ function calculateMarkets(scores) {
    VERDICT FINAL
 ========================= */
 
-function chooseBestBet(markets, home, away, h2h, expectedGoals, dataQuality) {
+function chooseBestBet(
+  markets,
+  home,
+  away,
+  h2h,
+  expectedGoals,
+  dataQuality
+) {
 
   const options = [];
 
   /* =========================
-     1. VICTOIRE DOMICILE
+     VICTOIRE DOMICILE
   ========================= */
 
-  let homeScore = markets.homeWin;
+  let homeScore =
+    markets.homeWin;
 
-  if (home.form > away.form) homeScore += 5;
-  if (home.winRate > away.winRate) homeScore += 5;
-  if (expectedGoals.home > expectedGoals.away) homeScore += 5;
+  if (home.form > away.form) {
+    homeScore += 5;
+  }
+
+  if (home.winRate > away.winRate) {
+    homeScore += 5;
+  }
+
+  if (
+    expectedGoals.home >
+    expectedGoals.away
+  ) {
+    homeScore += 5;
+  }
 
   options.push({
     name: `Victoire ${home.team}`,
@@ -224,14 +296,26 @@ function chooseBestBet(markets, home, away, h2h, expectedGoals, dataQuality) {
   });
 
   /* =========================
-     2. VICTOIRE EXTÉRIEUR
+     VICTOIRE EXTÉRIEUR
   ========================= */
 
-  let awayScore = markets.awayWin;
+  let awayScore =
+    markets.awayWin;
 
-  if (away.form > home.form) awayScore += 5;
-  if (away.winRate > home.winRate) awayScore += 5;
-  if (expectedGoals.away > expectedGoals.home) awayScore += 5;
+  if (away.form > home.form) {
+    awayScore += 5;
+  }
+
+  if (away.winRate > home.winRate) {
+    awayScore += 5;
+  }
+
+  if (
+    expectedGoals.away >
+    expectedGoals.home
+  ) {
+    awayScore += 5;
+  }
 
   options.push({
     name: `Victoire ${away.team}`,
@@ -240,20 +324,27 @@ function chooseBestBet(markets, home, away, h2h, expectedGoals, dataQuality) {
   });
 
   /* =========================
-     3. MATCH NUL
+     MATCH NUL
   ========================= */
 
-  let drawScore = markets.draw;
+  let drawScore =
+    markets.draw;
 
   const xgDifference =
-    Math.abs(expectedGoals.home - expectedGoals.away);
+    Math.abs(
+      expectedGoals.home -
+      expectedGoals.away
+    );
 
   if (xgDifference < 0.35) {
     drawScore += 10;
   }
 
   if (
-    Math.abs(home.form - away.form) < 0.20
+    Math.abs(
+      home.form -
+      away.form
+    ) < 0.20
   ) {
     drawScore += 5;
   }
@@ -265,10 +356,11 @@ function chooseBestBet(markets, home, away, h2h, expectedGoals, dataQuality) {
   });
 
   /* =========================
-     4. LES DEUX ÉQUIPES MARQUENT
+     BTTS
   ========================= */
 
-  let bttsScore = markets.bttsYes;
+  let bttsScore =
+    markets.bttsYes;
 
   if (
     expectedGoals.home >= 1.20 &&
@@ -298,10 +390,11 @@ function chooseBestBet(markets, home, away, h2h, expectedGoals, dataQuality) {
   });
 
   /* =========================
-     5. PLUS DE 1,5 BUTS
+     PLUS DE 1,5 BUTS
   ========================= */
 
-  let over15Score = markets.over15;
+  let over15Score =
+    markets.over15;
 
   const totalXG =
     expectedGoals.home +
@@ -322,92 +415,113 @@ function chooseBestBet(markets, home, away, h2h, expectedGoals, dataQuality) {
   });
 
   /* =========================
-     COMPARAISON FINALE
+     COMPARAISON
   ========================= */
 
   options.sort(
-    (a, b) => b.score - a.score
+    (a, b) =>
+      b.score - a.score
   );
 
-  const best = options[0];
-  const second = options[1];
+  const best =
+    options[0];
 
-  /*
-   * Si les deux meilleurs scénarios
-   * sont trop proches, on évite de forcer
-   * un verdict.
-   */
+  const second =
+    options[1];
 
   const separation =
-    best.score - second.score;
+    best.score -
+    second.score;
+
+  /* =========================
+     SIGNAL
+  ========================= */
 
   let signal = "ROUGE";
   let color = "#ef4444";
-  let message = "VERDICT INSUFFISAMMENT FIABLE";
-
-  /*
-   * VERT
-   */
+  let message =
+    "VERDICT INSUFFISAMMENT FIABLE";
 
   if (
     dataQuality >= 70 &&
     best.probability >= 65 &&
     separation >= 5
   ) {
+
     signal = "VERT";
     color = "#22c55e";
     message = "VERDICT FORT";
-  }
 
-  /*
-   * ORANGE
-   */
-
-  else if (
+  } else if (
     dataQuality >= 50 &&
     best.probability >= 55 &&
     separation >= 3
   ) {
+
     signal = "ORANGE";
     color = "#f59e0b";
     message = "VERDICT MOYEN";
   }
 
-  /*
-   * Explication simple
-   */
+  /* =========================
+     EXPLICATION
+  ========================= */
 
   let reason = "";
 
-  if (best.name === `Victoire ${home.team}`) {
-    reason =
-      "Meilleure combinaison entre probabilité de victoire, forme et buts attendus.";
-  }
+  if (
+    best.name ===
+    `Victoire ${home.team}`
+  ) {
 
-  else if (best.name === `Victoire ${away.team}`) {
     reason =
-      "Meilleure combinaison entre probabilité de victoire, forme et buts attendus.";
-  }
+      "La combinaison forme, probabilité de victoire et buts attendus favorise l'équipe domicile.";
 
-  else if (best.name === "Match nul") {
-    reason =
-      "Les deux équipes présentent des forces proches et des buts attendus équilibrés.";
-  }
+  } else if (
+    best.name ===
+    `Victoire ${away.team}`
+  ) {
 
-  else if (best.name === "Les deux équipes marquent") {
     reason =
-      "Les deux équipes présentent un potentiel offensif suffisant avec des défenses vulnérables.";
-  }
+      "La combinaison forme, probabilité de victoire et buts attendus favorise l'équipe extérieure.";
 
-  else if (best.name === "Plus de 1,5 buts") {
+  } else if (
+    best.name === "Match nul"
+  ) {
+
     reason =
-      "Le volume de buts attendu et les probabilités de score favorisent un match avec plusieurs buts.";
+      "Les forces des deux équipes sont proches et les buts attendus sont équilibrés.";
+
+  } else if (
+    best.name ===
+    "Les deux équipes marquent"
+  ) {
+
+    reason =
+      "Les données offensives et défensives favorisent un scénario où les deux équipes trouvent le chemin des buts.";
+
+  } else if (
+    best.name ===
+    "Plus de 1,5 buts"
+  ) {
+
+    reason =
+      "Le volume de buts attendu et la distribution des scores favorisent au moins deux buts.";
   }
 
   return {
     option: best.name,
-    probability: Number(best.probability.toFixed(1)),
-    score: Number(best.score.toFixed(1)),
+
+    probability:
+      Number(
+        best.probability.toFixed(1)
+      ),
+
+    score:
+      Number(
+        best.score.toFixed(1)
+      ),
+
     signal,
     color,
     message,
@@ -420,16 +534,22 @@ function chooseBestBet(markets, home, away, h2h, expectedGoals, dataQuality) {
 ========================= */
 
 function analyzeH2H(home, away) {
+
   const matches =
-    getHeadToHead(home, away) || [];
+    getHeadToHead(
+      home,
+      away
+    ) || [];
 
   let homeWins = 0;
   let draws = 0;
   let awayWins = 0;
-  let homeGoals = [];
-  let awayGoals = [];
+
+  const homeGoals = [];
+  const awayGoals = [];
 
   for (const m of matches) {
+
     const sameOrder =
       m.home.toLowerCase() ===
       home.toLowerCase();
@@ -445,28 +565,73 @@ function analyzeH2H(home, away) {
     homeGoals.push(hg);
     awayGoals.push(ag);
 
-    if (hg > ag) homeWins++;
-    else if (hg === ag) draws++;
-    else awayWins++;
+    if (hg > ag) {
+      homeWins++;
+    } else if (hg === ag) {
+      draws++;
+    } else {
+      awayWins++;
+    }
   }
 
-  const total = matches.length;
+  const total =
+    matches.length;
 
   return {
     matches: total,
-    homeAvgScored: Number(avg(homeGoals).toFixed(3)),
-    homeAvgConceded: Number(avg(awayGoals).toFixed(3)),
-    awayAvgScored: Number(avg(awayGoals).toFixed(3)),
-    awayAvgConceded: Number(avg(homeGoals).toFixed(3)),
-    homeWinRate: total
-      ? Number((homeWins / total * 100).toFixed(1))
-      : 0,
-    drawRate: total
-      ? Number((draws / total * 100).toFixed(1))
-      : 0,
-    awayWinRate: total
-      ? Number((awayWins / total * 100).toFixed(1))
-      : 0
+
+    homeAvgScored:
+      Number(
+        avg(homeGoals).toFixed(3)
+      ),
+
+    homeAvgConceded:
+      Number(
+        avg(awayGoals).toFixed(3)
+      ),
+
+    awayAvgScored:
+      Number(
+        avg(awayGoals).toFixed(3)
+      ),
+
+    awayAvgConceded:
+      Number(
+        avg(homeGoals).toFixed(3)
+      ),
+
+    homeWinRate:
+      total
+        ? Number(
+            (
+              homeWins /
+              total *
+              100
+            ).toFixed(1)
+          )
+        : 0,
+
+    drawRate:
+      total
+        ? Number(
+            (
+              draws /
+              total *
+              100
+            ).toFixed(1)
+          )
+        : 0,
+
+    awayWinRate:
+      total
+        ? Number(
+            (
+              awayWins /
+              total *
+              100
+            ).toFixed(1)
+          )
+        : 0
   };
 }
 
@@ -475,14 +640,25 @@ function analyzeH2H(home, away) {
 ========================= */
 
 function getTopScores(scores) {
+
   return scores
-    .sort((a, b) => b.probability - a.probability)
+    .sort(
+      (a, b) =>
+        b.probability -
+        a.probability
+    )
     .slice(0, 3)
     .map(s => ({
-      score: `${s.home}-${s.away}`,
-      probability: Number(
-        (s.probability * 100).toFixed(1)
-      )
+      score:
+        `${s.home}-${s.away}`,
+
+      probability:
+        Number(
+          (
+            s.probability *
+            100
+          ).toFixed(1)
+        )
     }));
 }
 
@@ -490,18 +666,31 @@ function getTopScores(scores) {
    PRÉDICTION PRINCIPALE
 ========================= */
 
-function predictMatch(homeName, awayName) {
-  const home = analyzeTeam(homeName);
-  const away = analyzeTeam(awayName);
+function predictMatch(
+  homeName,
+  awayName
+) {
 
-  if (!home.matches || !away.matches) {
+  const home =
+    analyzeTeam(homeName);
+
+  const away =
+    analyzeTeam(awayName);
+
+  if (
+    !home.matches ||
+    !away.matches
+  ) {
     throw new Error(
       "Données insuffisantes pour une ou deux équipes."
     );
   }
 
   const expectedGoals =
-    calculateExpectedGoals(home, away);
+    calculateExpectedGoals(
+      home,
+      away
+    );
 
   const scores =
     buildScores(
@@ -513,41 +702,63 @@ function predictMatch(homeName, awayName) {
     calculateMarkets(scores);
 
   const totalMatches =
-    home.matches + away.matches;
+    home.matches +
+    away.matches;
 
   const dataQuality =
     clamp(
-      Math.round((totalMatches / 40) * 100),
+      Math.round(
+        (
+          totalMatches /
+          40
+        ) * 100
+      ),
       0,
       100
     );
 
-  const bestBet =
-  chooseBestBet(
-    markets,
-    home,
-    away,
-    analyzeH2H(homeName, awayName),
-    expectedGoals,
-    dataQuality
-  );
+  const h2h =
+    analyzeH2H(
+      homeName,
+      awayName
+    );
 
-  let winner = "Match nul";
+  const bestBet =
+    chooseBestBet(
+      markets,
+      home,
+      away,
+      h2h,
+      expectedGoals,
+      dataQuality
+    );
+
+  /* =========================
+     VAINQUEUR PROBABLE
+  ========================= */
+
+  let winner =
+    "Match nul";
 
   if (
     markets.homeWin >
-    markets.draw &&
+      markets.draw &&
     markets.homeWin >
-    markets.awayWin
+      markets.awayWin
   ) {
-    winner = homeName;
+
+    winner =
+      homeName;
+
   } else if (
     markets.awayWin >
-    markets.homeWin &&
+      markets.homeWin &&
     markets.awayWin >
-    markets.draw
+      markets.draw
   ) {
-    winner = awayName;
+
+    winner =
+      awayName;
   }
 
   const confidence =
@@ -560,6 +771,7 @@ function predictMatch(homeName, awayName) {
     );
 
   return {
+
     match: {
       home: homeName,
       away: awayName
@@ -570,24 +782,52 @@ function predictMatch(homeName, awayName) {
       away
     },
 
-    h2h: analyzeH2H(
-      homeName,
-      awayName
-    ),
+    h2h,
 
     expectedGoals,
 
     predictions: {
+
       winner,
+
       dataQuality,
-      homeWin: Number(markets.homeWin.toFixed(1)),
-      draw: Number(markets.draw.toFixed(1)),
-      awayWin: Number(markets.awayWin.toFixed(1)),
-      over15: Number(markets.over15.toFixed(1)),
-      over25: Number(markets.over25.toFixed(1)),
-      bttsYes: Number(markets.bttsYes.toFixed(1)),
+
+      homeWin:
+        Number(
+          markets.homeWin.toFixed(1)
+        ),
+
+      draw:
+        Number(
+          markets.draw.toFixed(1)
+        ),
+
+      awayWin:
+        Number(
+          markets.awayWin.toFixed(1)
+        ),
+
+      over15:
+        Number(
+          markets.over15.toFixed(1)
+        ),
+
+      over25:
+        Number(
+          markets.over25.toFixed(1)
+        ),
+
+      bttsYes:
+        Number(
+          markets.bttsYes.toFixed(1)
+        ),
+
       confidence
     },
+
+    /* =========================
+       VERDICT UNIQUE
+    ========================= */
 
     bestBet,
 
@@ -595,6 +835,10 @@ function predictMatch(homeName, awayName) {
       getTopScores(scores)
   };
 }
+
+/* =========================
+   EXPORT
+========================= */
 
 module.exports = {
   predictMatch
