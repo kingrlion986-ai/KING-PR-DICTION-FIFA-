@@ -1,6 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 
+/* =========================
+   FICHIER DES DONNÉES
+========================= */
+
 const DATA_FILE = path.join(
   __dirname,
   "..",
@@ -8,34 +12,51 @@ const DATA_FILE = path.join(
   "matches.json"
 );
 
-/**
- * Charge le fichier historique.
- */
+/* =========================
+   NORMALISATION
+========================= */
+
+function normalizeTeamName(team) {
+  return String(team || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+/* =========================
+   CHARGEMENT
+========================= */
+
 function loadData() {
   try {
     if (!fs.existsSync(DATA_FILE)) {
-      return { matches: [] };
+      return {
+        matches: []
+      };
     }
 
-    const content = fs.readFileSync(
+    const raw = fs.readFileSync(
       DATA_FILE,
       "utf8"
     );
 
-    if (!content.trim()) {
-      return { matches: [] };
-    }
+    const data = JSON.parse(raw);
 
-    const data = JSON.parse(content);
-
-    if (!data || !Array.isArray(data.matches)) {
-      return { matches: [] };
+    if (
+      !data ||
+      !Array.isArray(data.matches)
+    ) {
+      return {
+        matches: []
+      };
     }
 
     return data;
+
   } catch (error) {
+
     console.error(
-      "Erreur chargement des données :",
+      "Erreur lecture matches.json :",
       error.message
     );
 
@@ -45,182 +66,215 @@ function loadData() {
   }
 }
 
-/**
- * Sauvegarde les données.
- */
-function saveData(data) {
-  const directory = path.dirname(DATA_FILE);
+/* =========================
+   SAUVEGARDE
+========================= */
 
-  if (!fs.existsSync(directory)) {
-    fs.mkdirSync(directory, {
+function saveData(data) {
+
+  const dir =
+    path.dirname(DATA_FILE);
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, {
       recursive: true
     });
   }
 
   fs.writeFileSync(
     DATA_FILE,
-    JSON.stringify(data, null, 2),
+    JSON.stringify(
+      data,
+      null,
+      2
+    ),
     "utf8"
   );
 }
 
-/**
- * Nettoyage du nom d'une équipe.
- */
-function normalizeTeamName(team) {
-  if (typeof team !== "string") return "";
+/* =========================
+   VALIDATION
+========================= */
 
-  return team
-    .trim()
-    .replace(/[,\s]+$/, "")
-    .replace(/\s+/g, " ");
-}
-
-/**
- * Vérifie qu'un score est valide.
- */
 function isValidGoals(value) {
+
+  const goals =
+    Number(value);
+
   return (
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= 30
+    Number.isInteger(goals) &&
+    goals >= 0 &&
+    goals <= 30
   );
 }
 
-/**
- * Vérifie qu'une date est valide.
- */
-function isValidDate(date) {
-  if (!date) return false;
+function isValidDate(value) {
 
-  const parsed = new Date(date);
+  if (!value) {
+    return false;
+  }
 
-  return !Number.isNaN(
-    parsed.getTime()
+  const date =
+    new Date(value);
+
+  return !isNaN(
+    date.getTime()
   );
 }
 
-/**
- * Validation complète d'un match.
- */
+/* =========================
+   VALIDATION MATCH
+========================= */
+
 function validateMatch(match) {
-  if (!match || typeof match !== "object") {
+
+  if (!match) {
     return false;
   }
 
-  const home = normalizeTeamName(match.home);
-  const away = normalizeTeamName(match.away);
-
-  if (!home || !away) {
+  if (
+    typeof match.home !== "string" ||
+    !match.home.trim()
+  ) {
     return false;
   }
 
-  if (home === away) {
+  if (
+    typeof match.away !== "string" ||
+    !match.away.trim()
+  ) {
     return false;
   }
 
-  if (!isValidGoals(match.homeGoals)) {
+  if (
+    !isValidGoals(
+      match.homeGoals
+    )
+  ) {
     return false;
   }
 
-  if (!isValidGoals(match.awayGoals)) {
+  if (
+    !isValidGoals(
+      match.awayGoals
+    )
+  ) {
     return false;
   }
 
-  if (match.date && !isValidDate(match.date)) {
+  if (
+    !isValidDate(match.date)
+  ) {
     return false;
   }
 
   return true;
 }
 
-/**
- * Crée une clé unique pour un match.
- *
- * La même rencontre avec la même date/heure
- * ne sera pas enregistrée deux fois.
- */
+/* =========================
+   CLÉ UNIQUE MATCH
+========================= */
+
 function getMatchKey(match) {
+
   return [
-    normalizeTeamName(match.home).toLowerCase(),
-    normalizeTeamName(match.away).toLowerCase(),
-    match.homeGoals,
-    match.awayGoals,
-    match.date || ""
+    normalizeTeamName(match.home),
+    normalizeTeamName(match.away),
+    Number(match.homeGoals),
+    Number(match.awayGoals),
+    new Date(match.date)
+      .toISOString()
   ].join("|");
 }
 
-/**
- * Ajoute un match historique.
- */
+/* =========================
+   AJOUTER UN MATCH
+========================= */
+
 function addMatch(match) {
+
   if (!validateMatch(match)) {
     throw new Error(
-      "Match invalide. Vérifiez les équipes, les scores et la date."
+      "Match invalide."
     );
   }
 
-  const data = loadData();
+  const data =
+    loadData();
 
   const normalizedMatch = {
-    id:
-      match.id ||
-      `${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`,
 
     date:
-      match.date ||
-      new Date().toISOString(),
+      new Date(match.date)
+        .toISOString(),
 
-    home: normalizeTeamName(match.home),
-    away: normalizeTeamName(match.away),
+    home:
+      match.home
+        .trim()
+        .replace(/\s+/g, " "),
 
-    homeGoals: Number(match.homeGoals),
-    awayGoals: Number(match.awayGoals),
+    away:
+      match.away
+        .trim()
+        .replace(/\s+/g, " "),
+
+    homeGoals:
+      Number(match.homeGoals),
+
+    awayGoals:
+      Number(match.awayGoals),
 
     competition:
-      typeof match.competition === "string" &&
-      match.competition.trim()
-        ? match.competition.trim()
-        : "FIFA Virtual",
+      match.competition ||
+      "FIFA FC 26. England Championship",
 
     source:
-      typeof match.source === "string" &&
-      match.source.trim()
-        ? match.source.trim()
-        : "FIFA_VIRTUAL"
+      match.source ||
+      "FIFA_VIRTUAL"
   };
 
   const newKey =
-    getMatchKey(normalizedMatch);
+    getMatchKey(
+      normalizedMatch
+    );
 
-  const exists = data.matches.some(
-    existing =>
-      getMatchKey(existing) === newKey
-  );
+  const duplicate =
+    data.matches.some(
+      existing =>
+        getMatchKey(existing) ===
+        newKey
+    );
 
-  if (exists) {
+  if (duplicate) {
     return {
-      ...normalizedMatch,
-      duplicate: true
+      added: false,
+      duplicate: true,
+      match: normalizedMatch
     };
   }
 
-  data.matches.push(normalizedMatch);
+  data.matches.push(
+    normalizedMatch
+  );
 
   saveData(data);
 
-  return normalizedMatch;
+  return {
+    added: true,
+    duplicate: false,
+    match: normalizedMatch
+  };
 }
 
-/**
- * Ajoute plusieurs matchs.
- */
+/* =========================
+   AJOUTER PLUSIEURS MATCHS
+========================= */
+
 function addMatches(matches) {
+
   if (!Array.isArray(matches)) {
     throw new Error(
-      "La liste des matchs doit être un tableau."
+      "La liste des matchs est invalide."
     );
   }
 
@@ -229,16 +283,26 @@ function addMatches(matches) {
   let invalid = 0;
 
   for (const match of matches) {
+
     try {
-      const result = addMatch(match);
+
+      const result =
+        addMatch(match);
 
       if (result.duplicate) {
         duplicates++;
       } else {
         added++;
       }
+
     } catch (error) {
+
       invalid++;
+
+      console.error(
+        "Match ignoré :",
+        error.message
+      );
     }
   }
 
@@ -250,108 +314,299 @@ function addMatches(matches) {
   };
 }
 
-/**
- * Retourne tous les matchs.
- */
+/* =========================
+   TOUS LES MATCHS
+========================= */
+
 function getMatches() {
-  return loadData().matches;
+
+  const data =
+    loadData();
+
+  return data.matches;
 }
 
-/**
- * Retourne les matchs d'une équipe.
+/* =========================
+   MATCHS D'UNE ÉQUIPE
+========================= */
+
+/*
+ * IMPORTANT :
+ *
+ * La recherche est maintenant
+ * insensible aux majuscules,
+ * minuscules et espaces.
+ *
+ * Exemple :
+ *
+ * Wolverhampton wanderers
+ * Wolverhampton Wanderers
+ * WOLVERHAMPTON WANDERERS
+ *
+ * = même équipe
  */
 
 function getTeamMatches(teamName) {
-  const team = normalizeTeamName(teamName).toLowerCase();
 
-  if (!team) return [];
+  const data =
+    loadData();
 
-  return getMatches().filter(match =>
-    normalizeTeamName(match.home).toLowerCase() === team ||
-    normalizeTeamName(match.away).toLowerCase() === team
+  const target =
+    normalizeTeamName(
+      teamName
+    );
+
+  if (!target) {
+    return [];
+  }
+
+  return data.matches.filter(
+    match => {
+
+      const home =
+        normalizeTeamName(
+          match.home
+        );
+
+      const away =
+        normalizeTeamName(
+          match.away
+        );
+
+      return (
+        home === target ||
+        away === target
+      );
+    }
   );
 }
 
-/**
- * Retourne les confrontations directes.
- */
-function getHeadToHead(homeTeam, awayTeam) {
-  const home = normalizeTeamName(homeTeam).toLowerCase();
-  const away = normalizeTeamName(awayTeam).toLowerCase();
+/* =========================
+   HEAD TO HEAD
+========================= */
 
-  return getMatches().filter(match => {
-    const h = normalizeTeamName(match.home).toLowerCase();
-    const a = normalizeTeamName(match.away).toLowerCase();
+function getHeadToHead(
+  homeTeam,
+  awayTeam
+) {
 
-    return (
-      (h === home && a === away) ||
-      (h === away && a === home)
+  const data =
+    loadData();
+
+  const home =
+    normalizeTeamName(
+      homeTeam
     );
-  });
+
+  const away =
+    normalizeTeamName(
+      awayTeam
+    );
+
+  if (!home || !away) {
+    return [];
+  }
+
+  return data.matches.filter(
+    match => {
+
+      const matchHome =
+        normalizeTeamName(
+          match.home
+        );
+
+      const matchAway =
+        normalizeTeamName(
+          match.away
+        );
+
+      /*
+       * On accepte les deux ordres :
+       *
+       * Chelsea vs Arsenal
+       *
+       * Arsenal vs Chelsea
+       */
+
+      return (
+        (
+          matchHome === home &&
+          matchAway === away
+        ) ||
+        (
+          matchHome === away &&
+          matchAway === home
+        )
+      );
+    }
+  );
 }
 
-/**
- * Retourne les équipes connues.
- */
-function getTeams() {
-  const teams = new Set();
+/* =========================
+   LISTE DES ÉQUIPES
+========================= */
 
-  getMatches().forEach(match => {
+function getTeams() {
+
+  const data =
+    loadData();
+
+  const teams = new Map();
+
+  for (const match of data.matches) {
+
     if (match.home) {
-      teams.add(match.home);
+
+      const key =
+        normalizeTeamName(
+          match.home
+        );
+
+      if (!teams.has(key)) {
+        teams.set(
+          key,
+          match.home
+            .trim()
+            .replace(/\s+/g, " ")
+        );
+      }
     }
 
     if (match.away) {
-      teams.add(match.away);
-    }
-  });
 
-  return [...teams].sort();
+      const key =
+        normalizeTeamName(
+          match.away
+        );
+
+      if (!teams.has(key)) {
+        teams.set(
+          key,
+          match.away
+            .trim()
+            .replace(/\s+/g, " ")
+        );
+      }
+    }
+  }
+
+  return Array.from(
+    teams.values()
+  ).sort(
+    (a, b) =>
+      a.localeCompare(
+        b,
+        "fr"
+      )
+  );
 }
 
-/**
- * Statistiques générales sur les données.
- */
-function getDataStats() {
-  const matches = getMatches();
+/* =========================
+   STATISTIQUES DONNÉES
+========================= */
 
-  const teams = getTeams();
+function getDataStats() {
+
+  const data =
+    loadData();
+
+  const matches =
+    data.matches || [];
+
+  const teams =
+    getTeams();
+
+  const competitions =
+    [
+      ...new Set(
+        matches
+          .map(
+            match =>
+              match.competition
+          )
+          .filter(Boolean)
+      )
+    ];
+
+  const sources =
+    [
+      ...new Set(
+        matches
+          .map(
+            match =>
+              match.source
+          )
+          .filter(Boolean)
+      )
+    ];
 
   return {
-    totalMatches: matches.length,
-    totalTeams: teams.length,
+
+    totalMatches:
+      matches.length,
+
+    totalTeams:
+      teams.length,
+
+    totalCompetitions:
+      competitions.length,
+
+    competitions,
+
+    sources,
 
     firstMatch:
-      matches.length > 0
+      matches.length
         ? matches
-            .map(match => new Date(match.date))
+            .map(m =>
+              new Date(m.date)
+            )
             .sort(
-              (a, b) => a - b
+              (a, b) =>
+                a - b
             )[0]
+            .toISOString()
         : null,
 
     lastMatch:
-      matches.length > 0
+      matches.length
         ? matches
-            .map(match => new Date(match.date))
+            .map(m =>
+              new Date(m.date)
+            )
             .sort(
-              (a, b) => b - a
+              (a, b) =>
+                b - a
             )[0]
+            .toISOString()
         : null
   };
 }
 
+/* =========================
+   EXPORT
+========================= */
+
 module.exports = {
+
   loadData,
   saveData,
+
+  normalizeTeamName,
+
+  isValidGoals,
+  isValidDate,
+  validateMatch,
+
+  getMatchKey,
+
   addMatch,
   addMatches,
+
   getMatches,
   getTeamMatches,
   getHeadToHead,
+
   getTeams,
-  getDataStats,
-  validateMatch,
-  normalizeTeamName,
-  getMatchKey
+  getDataStats
 };
