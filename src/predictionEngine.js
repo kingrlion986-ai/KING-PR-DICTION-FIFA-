@@ -200,62 +200,218 @@ function calculateMarkets(scores) {
 }
 
 /* =========================
-   MEILLEUR PARI
+   VERDICT FINAL
 ========================= */
 
-function chooseBestBet(markets, dataQuality) {
-  const options = [
-    {
-      name: "Plus de 1,5 buts",
-      probability: markets.over15
-    },
-    {
-      name: "Plus de 2,5 buts",
-      probability: markets.over25
-    },
-    {
-      name: "Les deux équipes marquent",
-      probability: markets.bttsYes
-    },
-    {
-      name: "Victoire domicile",
-      probability: markets.homeWin
-    },
-    {
-      name: "Victoire extérieur",
-      probability: markets.awayWin
-    }
-  ];
+function chooseBestBet(markets, home, away, h2h, expectedGoals, dataQuality) {
+
+  const options = [];
+
+  /* =========================
+     1. VICTOIRE DOMICILE
+  ========================= */
+
+  let homeScore = markets.homeWin;
+
+  if (home.form > away.form) homeScore += 5;
+  if (home.winRate > away.winRate) homeScore += 5;
+  if (expectedGoals.home > expectedGoals.away) homeScore += 5;
+
+  options.push({
+    name: `Victoire ${home.team}`,
+    probability: markets.homeWin,
+    score: homeScore
+  });
+
+  /* =========================
+     2. VICTOIRE EXTÉRIEUR
+  ========================= */
+
+  let awayScore = markets.awayWin;
+
+  if (away.form > home.form) awayScore += 5;
+  if (away.winRate > home.winRate) awayScore += 5;
+  if (expectedGoals.away > expectedGoals.home) awayScore += 5;
+
+  options.push({
+    name: `Victoire ${away.team}`,
+    probability: markets.awayWin,
+    score: awayScore
+  });
+
+  /* =========================
+     3. MATCH NUL
+  ========================= */
+
+  let drawScore = markets.draw;
+
+  const xgDifference =
+    Math.abs(expectedGoals.home - expectedGoals.away);
+
+  if (xgDifference < 0.35) {
+    drawScore += 10;
+  }
+
+  if (
+    Math.abs(home.form - away.form) < 0.20
+  ) {
+    drawScore += 5;
+  }
+
+  options.push({
+    name: "Match nul",
+    probability: markets.draw,
+    score: drawScore
+  });
+
+  /* =========================
+     4. LES DEUX ÉQUIPES MARQUENT
+  ========================= */
+
+  let bttsScore = markets.bttsYes;
+
+  if (
+    expectedGoals.home >= 1.20 &&
+    expectedGoals.away >= 1.20
+  ) {
+    bttsScore += 10;
+  }
+
+  if (
+    home.avgScored >= 1.20 &&
+    away.avgScored >= 1.20
+  ) {
+    bttsScore += 5;
+  }
+
+  if (
+    home.avgConceded >= 1.20 &&
+    away.avgConceded >= 1.20
+  ) {
+    bttsScore += 5;
+  }
+
+  options.push({
+    name: "Les deux équipes marquent",
+    probability: markets.bttsYes,
+    score: bttsScore
+  });
+
+  /* =========================
+     5. PLUS DE 1,5 BUTS
+  ========================= */
+
+  let over15Score = markets.over15;
+
+  const totalXG =
+    expectedGoals.home +
+    expectedGoals.away;
+
+  if (totalXG >= 2.40) {
+    over15Score += 8;
+  }
+
+  if (totalXG >= 3.00) {
+    over15Score += 7;
+  }
+
+  options.push({
+    name: "Plus de 1,5 buts",
+    probability: markets.over15,
+    score: over15Score
+  });
+
+  /* =========================
+     COMPARAISON FINALE
+  ========================= */
 
   options.sort(
-    (a, b) => b.probability - a.probability
+    (a, b) => b.score - a.score
   );
 
   const best = options[0];
+  const second = options[1];
+
+  /*
+   * Si les deux meilleurs scénarios
+   * sont trop proches, on évite de forcer
+   * un verdict.
+   */
+
+  const separation =
+    best.score - second.score;
 
   let signal = "ROUGE";
   let color = "#ef4444";
-  let message = "PAS DE PARI";
+  let message = "VERDICT INSUFFISAMMENT FIABLE";
 
-  if (dataQuality >= 60 && best.probability >= 65) {
+  /*
+   * VERT
+   */
+
+  if (
+    dataQuality >= 70 &&
+    best.probability >= 65 &&
+    separation >= 5
+  ) {
     signal = "VERT";
     color = "#22c55e";
-    message = "OPTION FAVORABLE";
-  } else if (
-    dataQuality >= 40 &&
-    best.probability >= 55
+    message = "VERDICT FORT";
+  }
+
+  /*
+   * ORANGE
+   */
+
+  else if (
+    dataQuality >= 50 &&
+    best.probability >= 55 &&
+    separation >= 3
   ) {
     signal = "ORANGE";
     color = "#f59e0b";
-    message = "PRUDENCE";
+    message = "VERDICT MOYEN";
+  }
+
+  /*
+   * Explication simple
+   */
+
+  let reason = "";
+
+  if (best.name === `Victoire ${home.team}`) {
+    reason =
+      "Meilleure combinaison entre probabilité de victoire, forme et buts attendus.";
+  }
+
+  else if (best.name === `Victoire ${away.team}`) {
+    reason =
+      "Meilleure combinaison entre probabilité de victoire, forme et buts attendus.";
+  }
+
+  else if (best.name === "Match nul") {
+    reason =
+      "Les deux équipes présentent des forces proches et des buts attendus équilibrés.";
+  }
+
+  else if (best.name === "Les deux équipes marquent") {
+    reason =
+      "Les deux équipes présentent un potentiel offensif suffisant avec des défenses vulnérables.";
+  }
+
+  else if (best.name === "Plus de 1,5 buts") {
+    reason =
+      "Le volume de buts attendu et les probabilités de score favorisent un match avec plusieurs buts.";
   }
 
   return {
     option: best.name,
     probability: Number(best.probability.toFixed(1)),
+    score: Number(best.score.toFixed(1)),
     signal,
     color,
-    message
+    message,
+    reason
   };
 }
 
@@ -367,10 +523,14 @@ function predictMatch(homeName, awayName) {
     );
 
   const bestBet =
-    chooseBestBet(
-      markets,
-      dataQuality
-    );
+  chooseBestBet(
+    markets,
+    home,
+    away,
+    analyzeH2H(homeName, awayName),
+    expectedGoals,
+    dataQuality
+  );
 
   let winner = "Match nul";
 
